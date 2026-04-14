@@ -988,9 +988,14 @@ async def lifespan(app: FastAPI):
         from modules.learning.service import init_learning_service
         init_learning_service(audit_motor_db)
         
+        # Sprint 7: Initialize Adaptation Service
+        from modules.adaptation.service import init_adaptation_service
+        init_adaptation_service(audit_motor_db)
+        
         print("[Sprint 2] Runtime Service + DecisionTrace + TruthValidator + Daemon initialized")
         print("[Sprint 5] DecisionOutcomeService initialized")
         print("[Sprint 6] LearningService initialized (pattern extraction, NO ML)")
+        print("[Sprint 7] AdaptationService initialized (controlled recommendations, operator-only apply)")
     except Exception as e:
         print(f"[Sprint A2] ❌ Runtime Service init failed: {e}")
         import traceback
@@ -1507,6 +1512,14 @@ try:
     print("[Routes] Learning Layer registered (Sprint 6)")
 except ImportError as e:
     print(f"[Routes] Learning Layer not available: {e}")
+
+# Sprint 7: Adaptation Layer Routes
+try:
+    from modules.adaptation.routes import router as adaptation_router
+    app.include_router(adaptation_router)
+    print("[Routes] Adaptation Layer registered (Sprint 7 - Controlled)")
+except ImportError as e:
+    print(f"[Routes] Adaptation Layer not available: {e}")
 
 
 
