@@ -98,9 +98,6 @@ const IndexerPage = lazy(() => import("./pages/admin/IndexerPage"));
 // On-chain Admin — Unified Control Page (6 tabs)
 const AdminOnchainPage = lazy(() => import("./pages/admin/onchain/AdminOnchainPage"));
 
-// Trading Admin — Unified Trading Control Page (6 tabs)
-const AdminTradingPage = lazy(() => import("./pages/admin/AdminTradingPage"));
-
 // Product Signals - Alerts Settings
 const AdminAlertsSettingsPage = lazy(() => import("./pages/admin/AdminAlertsSettingsPage"));
 
@@ -394,9 +391,6 @@ function App() {
 
               {/* On-chain Admin — Unified Control Page (6 tabs) */}
               <Route path="/admin/onchain" element={<AdminOnchainPage />} />
-              
-              {/* Trading Admin — Unified Trading Control Page (6 tabs) */}
-              <Route path="/admin/trading" element={<AdminTradingPage />} />
               
               <Route path="/admin/system-overview" element={<SystemOverviewPage />} />
               <Route path="/admin/data-pipelines" element={<Navigate to="/admin/onchain?tab=infrastructure" replace />} />

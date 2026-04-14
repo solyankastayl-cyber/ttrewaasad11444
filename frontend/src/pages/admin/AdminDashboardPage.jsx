@@ -203,7 +203,7 @@ export default function AdminDashboardPage() {
 
         {/* Quick Navigation */}
         <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 mb-8">
-          <Link to="/admin/trading" data-testid="admin-nav-trading">
+          <Link to="/trading" data-testid="admin-nav-trading">
             <Card className="bg-white/50 border-slate-200 hover:border-indigo-500/50 transition-colors cursor-pointer">
               <CardContent className="p-4 flex items-center gap-3">
                 <TrendingUp className="w-5 h-5 text-indigo-600" />
