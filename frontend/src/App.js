@@ -439,8 +439,8 @@ function App() {
               <Route path="/admin/connections" element={<AdminConnectionsPage />} />
 
               {/* Trading Terminal & System Control (Cockpit) */}
-              {/* Old AdminTradingTerminalPage removed - use /trading or /terminal instead */}
-              <Route path="/admin/trading-terminal" element={<Navigate to="/trading?tab=strategies" replace />} />
+              {/* Admin Trading Terminal */}
+              <Route path="/admin/trading-terminal" element={<AdminTradingTerminalPage />} />
               <Route path="/admin/system-control" element={<AdminCockpitSystemControlPage />} />
 
               {/* System Parsing — удалён (дубль Parser) → redirect */}
