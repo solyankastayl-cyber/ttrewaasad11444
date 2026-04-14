@@ -28,6 +28,7 @@ import {
   Zap,
   Loader2,
   MessageCircle,
+  TrendingUp,
 } from 'lucide-react';
 
 // Status indicator component
@@ -201,7 +202,15 @@ export default function AdminDashboardPage() {
         )}
 
         {/* Quick Navigation */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 mb-8">
+          <Link to="/admin/trading" data-testid="admin-nav-trading">
+            <Card className="bg-white/50 border-slate-200 hover:border-indigo-500/50 transition-colors cursor-pointer">
+              <CardContent className="p-4 flex items-center gap-3">
+                <TrendingUp className="w-5 h-5 text-indigo-600" />
+                <span className="text-sm font-medium text-slate-900">Trading</span>
+              </CardContent>
+            </Card>
+          </Link>
           <Link to="/admin/ml" data-testid="admin-nav-ml">
             <Card className="bg-white/50 border-slate-200 hover:border-emerald-500/50 transition-colors cursor-pointer">
               <CardContent className="p-4 flex items-center gap-3">
