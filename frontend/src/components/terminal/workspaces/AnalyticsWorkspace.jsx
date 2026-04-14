@@ -1,13 +1,13 @@
 /**
  * Analytics Workspace
- * Phase 4 + Phase 5: Operational Analytics Layer
+ * Sprint 5 + Sprint 6: Decision Analytics + Learning Layer
  * 
- * Operator-grade analytics: 2-second scan, summary-first.
+ * Operator-grade analytics: explainable, actionable insights.
  * 
  * Layout:
- * [ Dynamic Risk (R1) ] [ Execution ] [ Safety ] [ Adaptive Risk (R2) ]
- * 
- * P0: Summary panels only
+ * [ Learning Insights (Sprint 6) ] - Self-awareness layer
+ * [ Decision Performance (Sprint 5) ] - Outcomes & performance
+ * [ R1 | R2 | Execution | Safety ] - Operational metrics
  */
 
 import DynamicRiskAnalyticsPanel from '../analytics/DynamicRiskAnalyticsPanel';
@@ -15,6 +15,7 @@ import ExecutionAnalyticsPanel from '../analytics/ExecutionAnalyticsPanel';
 import SafetyAnalyticsPanel from '../analytics/SafetyAnalyticsPanel';
 import AdaptiveRiskAnalyticsPanel from '../analytics/AdaptiveRiskAnalyticsPanel';
 import DecisionAnalyticsPanel from '../analytics/DecisionAnalyticsPanel';
+import LearningInsightsPanel from '../analytics/LearningInsightsPanel';
 import useAdaptiveRiskAnalytics from '@/hooks/analytics/useAdaptiveRiskAnalytics';
 import { useDecisionAnalytics } from '../../../hooks/analytics/useDecisionAnalytics';
 
@@ -28,11 +29,14 @@ export default function AnalyticsWorkspace() {
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-100">Operational Analytics</h2>
         <p className="text-sm text-gray-500 mt-1">
-          System observability: decisions, R1, R2, execution, safety
+          System observability: learning, decisions, R1, R2, execution, safety
         </p>
       </div>
 
-      {/* Sprint 5: Decision Performance — FIRST (most important) */}
+      {/* Sprint 6: Learning Insights — FIRST (self-awareness) */}
+      <LearningInsightsPanel />
+
+      {/* Sprint 5: Decision Performance — SECOND (outcomes) */}
       <DecisionAnalyticsPanel data={decisionData} loading={decisionLoading} />
 
       {/* Existing Analytics Panels Grid */}

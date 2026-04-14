@@ -984,8 +984,13 @@ async def lifespan(app: FastAPI):
         from modules.decision_outcome.service import init_decision_outcome_service
         init_decision_outcome_service(audit_motor_db)
         
+        # Sprint 6: Initialize Learning Service
+        from modules.learning.service import init_learning_service
+        init_learning_service(audit_motor_db)
+        
         print("[Sprint 2] Runtime Service + DecisionTrace + TruthValidator + Daemon initialized")
         print("[Sprint 5] DecisionOutcomeService initialized")
+        print("[Sprint 6] LearningService initialized (pattern extraction, NO ML)")
     except Exception as e:
         print(f"[Sprint A2] ❌ Runtime Service init failed: {e}")
         import traceback
@@ -1494,6 +1499,14 @@ try:
     print("[Routes] Decision Analytics router registered")
 except ImportError as e:
     print(f"[Routes] Decision Analytics router not available: {e}")
+
+# Sprint 6: Learning Layer Routes
+try:
+    from modules.learning.routes import router as learning_router
+    app.include_router(learning_router)
+    print("[Routes] Learning Layer registered (Sprint 6)")
+except ImportError as e:
+    print(f"[Routes] Learning Layer not available: {e}")
 
 
 
