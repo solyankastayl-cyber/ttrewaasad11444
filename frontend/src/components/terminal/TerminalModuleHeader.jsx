@@ -1,17 +1,12 @@
 import { useTerminal } from '../../store/terminalStore';
-import { Activity, Target, Layers, Zap, Settings, Globe, TrendingUp, Radio, Shield, GitBranch } from 'lucide-react';
+import { Activity, Target, TrendingUp, GitBranch } from 'lucide-react';
 
+// OPERATOR TABS ONLY (admin tabs moved to /admin/trading)
 const TABS = [
   { id: 'trade', label: 'Trade', icon: Activity, workspace: 'trade' },
-  { id: 'portfolio', label: 'Portfolio', icon: Target, workspace: 'portfolio' },
   { id: 'positions', label: 'Positions', icon: TrendingUp, workspace: 'positions' },
   { id: 'decisions', label: 'Decisions', icon: GitBranch, workspace: 'decisions' },
-  { id: 'strategies', label: 'Strategies', icon: Layers, workspace: 'strategies' },
-  { id: 'execution-feed', label: 'Execution', icon: Radio, workspace: 'execution-feed' },
-  { id: 'risk', label: 'Risk', icon: Shield, workspace: 'risk' },
-  { id: 'zap', label: 'Zap', icon: Zap, workspace: 'zap' },
-  { id: 'system', label: 'System', icon: Settings, workspace: 'system' },
-  { id: 'config', label: 'Config', icon: Globe, workspace: 'config' },
+  { id: 'analytics', label: 'Analytics', icon: Target, workspace: 'analytics' },
 ];
 
 export default function TerminalModuleHeader() {

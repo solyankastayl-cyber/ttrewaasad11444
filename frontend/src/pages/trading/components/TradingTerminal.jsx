@@ -4,25 +4,20 @@ import TradingChart from '../../../components/charts/TradingChart';
 import PortfolioOverview from '../../../components/terminal/PortfolioOverview';
 import AllocatorPanel from '../../../components/terminal/AllocatorPanel';
 import EquityCurve from '../../../components/terminal/EquityCurve';
-import ExecutionPanel from '../../../components/terminal/ExecutionPanel';
-import StrategyPanel from '../../../components/terminal/StrategyPanel';
-import AutoTradingToggle from '../../../components/terminal/AutoTradingToggle';
 import PerformancePanel from '../../../components/terminal/PerformancePanel';
 import PnLPanel from '../../../components/terminal/PnLPanel';
 import ContextStrip from '../../../components/terminal/ContextStrip';
 import PortfolioWorkspace from '../../../components/terminal/workspaces/PortfolioWorkspace';
-import DynamicRiskWorkspace from '../../../components/terminal/workspaces/DynamicRiskWorkspace';
 import AnalyticsWorkspace from '../../../components/terminal/workspaces/AnalyticsWorkspace';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL || '';
 
-// Terminal Tabs Configuration
+// Terminal Tabs Configuration (OPERATOR ONLY - админские табы перенесены в /admin/trading)
 const TABS = [
   { id: 'trade', label: 'Trade', icon: '⚡' },
-  { id: 'portfolio', label: 'Portfolio', icon: '💼' },
-  { id: 'risk', label: 'Risk', icon: '🛡️' },
+  { id: 'positions', label: 'Positions', icon: '📍' },
+  { id: 'decisions', label: 'Decisions', icon: '🎯' },
   { id: 'analytics', label: 'Analytics', icon: '📊' },
-  { id: 'execution', label: 'Execution', icon: '📡' },
 ];
 
 const TradingTerminal = () => {
@@ -88,7 +83,7 @@ const TradingTerminal = () => {
 
   const t = (ru, en) => (lang === 'ru' ? ru : en);
 
-  // Content Router
+  // Content Router (Operator tabs only - admin tabs moved to /admin/trading)
   const renderContent = () => {
     switch (activeTab) {
       case 'trade':
@@ -116,30 +111,41 @@ const TradingTerminal = () => {
                 <PerformancePanel lang={lang} />
                 <PnLPanel lang={lang} />
                 <AllocatorPanel lang={lang} />
-                <ExecutionPanel lang={lang} />
-                <StrategyPanel lang={lang} />
               </div>
             </div>
           </main>
         );
 
-      case 'portfolio':
-        return <PortfolioWorkspace />;
+      case 'positions':
+        return (
+          <div className="p-6 max-w-[1920px] mx-auto">
+            <div className="mb-6">
+              <h2 className="text-2xl font-semibold text-white mb-2">{t('Позиции', 'Positions')}</h2>
+              <p className="text-sm text-gray-400">{t('Текущие открытые позиции', 'Current open positions')}</p>
+            </div>
+            <PortfolioWorkspace />
+          </div>
+        );
 
-      case 'risk':
-        return <DynamicRiskWorkspace />;
+      case 'decisions':
+        return (
+          <div className="p-6 max-w-[1920px] mx-auto">
+            <div className="mb-6">
+              <h2 className="text-2xl font-semibold text-white mb-2">{t('Решения', 'Decisions')}</h2>
+              <p className="text-sm text-gray-400">{t('Торговые решения и результаты', 'Trading decisions and outcomes')}</p>
+            </div>
+            <AnalyticsWorkspace />
+          </div>
+        );
 
       case 'analytics':
-        return <AnalyticsWorkspace />;
-
-      case 'execution':
         return (
-          <div className="p-6">
-            <div className="mb-4">
-              <h2 className="text-2xl font-bold text-gray-100">Execution Quality</h2>
-              <p className="text-sm text-gray-500 mt-1">Order execution metrics and latency analysis</p>
+          <div className="p-6 max-w-[1920px] mx-auto">
+            <div className="mb-6">
+              <h2 className="text-2xl font-semibold text-white mb-2">{t('Аналитика', 'Analytics')}</h2>
+              <p className="text-sm text-gray-400">{t('Производительность и метрики', 'Performance metrics')}</p>
             </div>
-            <ExecutionPanel lang={lang} />
+            <AnalyticsWorkspace />
           </div>
         );
 
