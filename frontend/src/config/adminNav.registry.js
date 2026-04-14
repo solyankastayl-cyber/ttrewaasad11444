@@ -272,13 +272,13 @@ export const ADMIN_NAV = [
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // TRADING TERMINAL — Execution, Portfolio, Risk
+  // TRADING & ANALYSIS — Unified control center
   // ═══════════════════════════════════════════════════════════════
   {
-    id: 'trading-terminal',
-    label: 'Trading Terminal',
+    id: 'trading',
+    label: 'Trading',
     icon: TrendingUp,
-    path: '/admin/trading-terminal',
+    path: '/admin/trading',
   },
 
   // ═══════════════════════════════════════════════════════════════

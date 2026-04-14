@@ -174,6 +174,7 @@ const TechAnalysisPage = lazy(() => import("./pages/TechAnalysis"));
 
 // Admin — Trading Terminal & System Control (Cockpit)
 const AdminTradingTerminalPage = lazy(() => import("./pages/admin/AdminTradingTerminalPage"));
+const AdminTradingUnifiedPage = lazy(() => import("./pages/admin/AdminTradingUnifiedPage"));
 const AdminCockpitSystemControlPage = lazy(() => import("./pages/admin/AdminSystemControlPage"));
 const TelegramChannelOverviewPage = lazy(() => import("./pages/TelegramChannelOverviewPage"));
 // TelegramNetworkPage removed per user request
@@ -439,8 +440,10 @@ function App() {
               <Route path="/admin/connections" element={<AdminConnectionsPage />} />
 
               {/* Trading Terminal & System Control (Cockpit) */}
-              {/* Admin Trading Terminal */}
-              <Route path="/admin/trading-terminal" element={<AdminTradingTerminalPage />} />
+              {/* Admin Trading Unified - Single page with tabs */}
+              <Route path="/admin/trading" element={<AdminTradingUnifiedPage />} />
+              {/* Legacy route - redirect to unified page */}
+              <Route path="/admin/trading-terminal" element={<Navigate to="/admin/trading" replace />} />
               <Route path="/admin/system-control" element={<AdminCockpitSystemControlPage />} />
 
               {/* System Parsing — удалён (дубль Parser) → redirect */}
