@@ -8,6 +8,7 @@ import RuntimeStatusPanel from '../system/RuntimeStatusPanel';
 import ExchangeStatusPanel from '../system/ExchangeStatusPanel';
 import RiskHealthPanel from '../system/RiskHealthPanel';
 import SessionMetricsPanel from '../system/SessionMetricsPanel';
+import AdaptationRecommendationsPanel from '../system/AdaptationRecommendationsPanel';
 
 const backendUrl = process.env.REACT_APP_BACKEND_URL;
 
@@ -60,6 +61,11 @@ export default function SystemWorkspace() {
       
       {/* Main Content */}
       <div className="p-4">
+        {/* Sprint 7: ADAPTATION RECOMMENDATIONS — TOP PRIORITY */}
+        <div className="mb-4">
+          <AdaptationRecommendationsPanel />
+        </div>
+        
         {/* AUTO SAFETY — P0 BLOCK */}
         <div className="mb-4">
           <AutoSafetyPanel />
