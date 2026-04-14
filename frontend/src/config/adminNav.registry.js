@@ -278,7 +278,7 @@ export const ADMIN_NAV = [
     id: 'trading-terminal',
     label: 'Trading Terminal',
     icon: TrendingUp,
-    path: '/admin/trading-terminal',
+    path: '/trading',
   },
 
   // ═══════════════════════════════════════════════════════════════
