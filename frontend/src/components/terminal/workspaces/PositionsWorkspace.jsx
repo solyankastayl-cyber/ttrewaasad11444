@@ -5,7 +5,7 @@ import PositionCard from "../positions/PositionCard";
 import { AlertTriangle } from "lucide-react";
 
 export default function PositionsWorkspace() {
-  const { positions, refresh } = usePositions();
+  const { positions, refresh, isConnected } = usePositions();
   const control = usePositionControl();
   const protection = useProtection();
 

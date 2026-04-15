@@ -776,7 +776,7 @@ class ExecutionRealityController:
         # P1.5.1: Adaptive timeout selection
         # Use spike timeout if circuit breaker recently opened or p95 latency high
         latency_stats = self.latency_tracker.get_stats()
-        p95_latency = latency_stats.get("p95_submit_to_ack_ms", 0.0)
+        p95_latency = latency_stats.get("p95_network_ms") or 0.0
         cb_state = self.circuit_breaker.get_state()
         
         use_spike_mode = (
@@ -984,7 +984,7 @@ class ExecutionRealityController:
         # 3. Queue Pressure Guard Check
         inflight_count = self.latency_tracker.get_inflight_count()
         latency_stats = self.latency_tracker.get_stats()
-        avg_latency = latency_stats.get("avg_submit_to_ack_ms", 0.0)
+        avg_latency = latency_stats.get("p50_network_ms") or 0.0
         
         # Get queue depth
         queue_depth = 0
@@ -1132,8 +1132,9 @@ class ExecutionRealityController:
                 return 0.0
             return statistics.median(data) if len(data) > 0 else 0.0
         
-        p50_ack = calc_p50(self.latency_tracker._submit_to_ack_ms)
-        p50_fill = calc_p50(self.latency_tracker._submit_to_first_fill_ms)
+        # Use new LatencyTracker API (network_latencies = submit_to_ack)
+        p50_ack = calc_p50(self.latency_tracker._network_latencies_ms)
+        p50_fill = calc_p50(self.latency_tracker._execution_latencies_ms)
         
         # Get execution metrics from ExecutionMetricsStore
         exec_metrics = self.metrics_store.get_metrics()
@@ -1151,7 +1152,7 @@ class ExecutionRealityController:
         
         # P1-B: Evaluate circuit breaker with current metrics
         circuit_breaker_metrics = {
-            "latency_p95_ms": latency_stats["p95_submit_to_ack_ms"],
+            "latency_p95_ms": latency_stats.get("p95_network_ms") or 0.0,  # network = submit_to_ack
             "reject_rate": exec_metrics["reject_rate"],
             "timeout_rate": exec_metrics["timeout_rate"],
             "sample_count": exec_metrics["total_submits"]
@@ -1173,9 +1174,9 @@ class ExecutionRealityController:
         
         # P1: Get queue pressure evaluation
         pressure_eval = self.queue_pressure_guard.evaluate(
-            inflight_orders=latency_stats["inflight_count"],
+            inflight_orders=len(self.latency_tracker._inflight),
             queue_depth=queue_depth,
-            avg_latency_ms=latency_stats["avg_submit_to_ack_ms"]
+            avg_latency_ms=latency_stats.get("p50_network_ms") or 0.0  # Use p50 network latency, handle None
         )
         
         # Override health if queue pressure critical
@@ -1185,16 +1186,16 @@ class ExecutionRealityController:
         return {
             "status": health_status,
             "latency": {
-                "avg_submit_to_ack_ms": latency_stats["avg_submit_to_ack_ms"],
+                "avg_submit_to_ack_ms": round(latency_stats.get("p50_network_ms") or 0.0, 2),
                 "p50_submit_to_ack_ms": round(p50_ack, 2),
-                "p95_submit_to_ack_ms": latency_stats["p95_submit_to_ack_ms"],
-                "avg_submit_to_fill_ms": latency_stats["avg_submit_to_first_fill_ms"],
+                "p95_submit_to_ack_ms": round(latency_stats.get("p95_network_ms") or 0.0, 2),
+                "avg_submit_to_fill_ms": round(latency_stats.get("p50_total_ms") or 0.0, 2),
                 "p50_submit_to_fill_ms": round(p50_fill, 2),
-                "p95_submit_to_fill_ms": latency_stats["p95_submit_to_first_fill_ms"]
+                "p95_submit_to_fill_ms": round(latency_stats.get("p95_total_ms") or 0.0, 2)
             },
             "queue": {
                 "queue_depth": queue_depth,
-                "inflight_orders": latency_stats["inflight_count"],
+                "inflight_orders": len(self.latency_tracker._inflight),
                 "avg_queue_depth": exec_metrics["avg_queue_depth"],
                 "pressure": pressure_eval["pressure"],
                 "pressure_level": pressure_eval["level"]

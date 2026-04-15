@@ -104,7 +104,7 @@ class QueuePressureGuard:
         # Normalize each metric to 0-1 scale
         inflight_norm = min(inflight_orders / self.max_inflight, 1.0)
         queue_norm = min(queue_depth / self.max_queue_depth, 1.0)
-        latency_norm = min(avg_latency_ms / self.max_latency_ms, 1.0)
+        latency_norm = min((avg_latency_ms or 0.0) / self.max_latency_ms, 1.0)  # Handle None
         
         # Weighted composite
         pressure = (
@@ -189,7 +189,7 @@ class QueuePressureGuard:
             reasons.append(f"high_inflight({inflight_orders})")
         if queue_depth > self.max_queue_depth * 0.8:
             reasons.append(f"high_queue({queue_depth})")
-        if avg_latency_ms > self.max_latency_ms * 0.8:
+        if avg_latency_ms and avg_latency_ms > self.max_latency_ms * 0.8:  # Handle None
             reasons.append(f"high_latency({avg_latency_ms:.0f}ms)")
         
         reason = " + ".join(reasons) if reasons else "healthy"
@@ -211,6 +211,6 @@ class QueuePressureGuard:
             "metrics": {
                 "inflight_orders": inflight_orders,
                 "queue_depth": queue_depth,
-                "avg_latency_ms": round(avg_latency_ms, 2)
+                "avg_latency_ms": round(avg_latency_ms, 2) if avg_latency_ms is not None else 0.0
             }
         }
