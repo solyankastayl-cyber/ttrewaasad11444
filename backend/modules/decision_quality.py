@@ -39,7 +39,9 @@ class DecisionQualityService:
         for o in outcomes:
             dec = decisions_map.get(o.get("decision_id"), {})
             o["confidence"] = dec.get("confidence", 0.5)
-            o["signal_price"] = dec.get("entry_price", 0)
+            # signal_price: prefer outcome doc's own field, fallback to decision entry_price
+            if not o.get("signal_price"):
+                o["signal_price"] = dec.get("entry_price", 0)
             enriched.append(o)
 
         total = len(enriched)
@@ -179,8 +181,11 @@ class DecisionQualityService:
     def _slippage_analysis(self, outcomes: List[Dict]) -> Dict:
         slippages = []
         for o in outcomes:
+            # signal_price: price from the decision at generation time
+            # entry_price: actual execution price (from Coinbase)
             signal_p = o.get("signal_price", 0)
             exec_p = o.get("entry_price", 0)
+            # Only count slippage when we have a real signal price
             if signal_p > 0 and exec_p > 0:
                 slip = abs(exec_p - signal_p)
                 slippages.append(slip)

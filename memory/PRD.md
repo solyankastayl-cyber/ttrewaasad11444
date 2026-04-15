@@ -47,6 +47,14 @@ Clone, analyze, and deploy FOMO-Trade v1.2 from GitHub. Fix P0 issue: execution 
 19. Created `DecisionQualityPanel.jsx` (4 blocks: Core Metrics, Confidence, Direction, Losses)
 20. Wired into AnalyticsWorkspace with `useDecisionQuality` hook (15s auto-refresh)
 
+### P2.5 — Data Correction Layer (Apr 15, 2026)
+21. Verified SHORT PnL calculation — NO BUG (all 4 SHORT cases match expected values)
+22. Diagnosed slippage: real market drift between signal generation and execution (not a bug)
+23. Added EXECUTION AUDIT structured logging in `_enrich_paper_payload()`
+24. Added slippage sanity guard (MAX_SLIPPAGE_PCT=1.0%) in execution handler
+25. Propagated `signal_price` from decision → bridge → execution payload → outcome doc
+26. Fixed decision_quality.py to use correct signal_price source for slippage calculation
+
 ## Test Results
 - All 5 guards tested and passing (test script: `/app/backend/tests/test_risk_guard.py`)
 - 10/10 closed cases PnL verified (0 mismatches)

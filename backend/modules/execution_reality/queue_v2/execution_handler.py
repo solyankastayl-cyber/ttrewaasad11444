@@ -6,6 +6,7 @@ Sprint A2.3: Unified execution interface for DRY_RUN and REAL modes.
 
 import logging
 import os
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
@@ -194,8 +195,45 @@ class ExecutionHandler:
             "entry_price": market_price,
             "price": market_price,
             "final_size": quantity,
+            "signal_price": payload.get("signal_price", payload.get("price", payload.get("entry_price", 0))),
         }
-        
+
+        # ── EXECUTION AUDIT LOG ──
+        signal_price = enriched["signal_price"]
+        slippage = abs(market_price - signal_price) if signal_price and signal_price > 0 else None
+        slippage_pct = (slippage / signal_price * 100) if slippage is not None and signal_price > 0 else None
+        exec_ts = datetime.now(timezone.utc).isoformat()
+
+        print(
+            f"EXECUTION AUDIT: symbol={symbol} "
+            f"signal_price=${signal_price:,.2f} "
+            f"execution_price=${market_price:,.2f} "
+            f"slippage={'${:,.4f}'.format(slippage) if slippage is not None else 'N/A'} "
+            f"slippage_pct={f'{slippage_pct:.4f}%' if slippage_pct is not None else 'N/A'} "
+            f"price_source=coinbase "
+            f"execution_timestamp={exec_ts}"
+        )
+
+        # ── SLIPPAGE SANITY GUARD ──
+        MAX_SLIPPAGE_PCT = 1.0
+        if slippage_pct is not None and slippage_pct > MAX_SLIPPAGE_PCT:
+            logger.warning(
+                f"[PAPER] SLIPPAGE REJECTED: {symbol} slippage {slippage_pct:.4f}% "
+                f"exceeds max {MAX_SLIPPAGE_PCT}% (signal=${signal_price:,.2f} exec=${market_price:,.2f})"
+            )
+            print(
+                f"SLIPPAGE REJECTED: {symbol} {slippage_pct:.4f}% > {MAX_SLIPPAGE_PCT}% "
+                f"signal=${signal_price:,.2f} exec=${market_price:,.2f}"
+            )
+            raise ValueError(
+                f"Slippage {slippage_pct:.4f}% exceeds max {MAX_SLIPPAGE_PCT}% "
+                f"(signal=${signal_price:,.2f}, exec=${market_price:,.2f})"
+            )
+        elif slippage_pct is None:
+            print(f"SLIPPAGE CHECK: {symbol} — no signal price available, skipping guard")
+        else:
+            print(f"SLIPPAGE OK: {symbol} {slippage_pct:.4f}% within {MAX_SLIPPAGE_PCT}% limit")
+
         logger.info(
             f"[PAPER] Enriched payload: symbol={symbol}, qty={quantity:.6f}, "
             f"market_price=${market_price:,.2f} (REAL)"

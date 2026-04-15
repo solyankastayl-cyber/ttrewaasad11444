@@ -98,6 +98,7 @@ class ExecutionBridge:
                 "strategy": signal.get("strategy"),
                 "timeframe": signal.get("timeframe"),
                 "size_usd": signal.get("size_usd", 0),
+                "signal_price": signal.get("entry_price", 0),
             }
             
             # Enqueue напрямую через ExecutionQueueRepository

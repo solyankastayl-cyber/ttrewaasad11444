@@ -230,6 +230,7 @@ class TradingCaseService:
                 "strategy": case.strategy,
                 "entry_price": case.avg_entry_price,
                 "exit_price": close_price,
+                "signal_price": case.signal_price if hasattr(case, 'signal_price') else 0,
                 "qty": case.qty,
                 "pnl_usd": case.realized_pnl,
                 "pnl_pct": pnl_pct,
