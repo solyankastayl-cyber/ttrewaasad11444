@@ -1071,36 +1071,51 @@ async def lifespan(app: FastAPI):
             if len(active_cases) == 0:
                 print("[P0.6] 🌱 Seeding demo trading cases...")
                 
-                # Create BTC position
+                # Get REAL prices from Coinbase
+                btc_price, eth_price = 74000.0, 2325.0  # defaults
+                try:
+                    from modules.data.coinbase_provider import CoinbaseProvider
+                    provider = CoinbaseProvider()
+                    btc_ticker = await provider.get_ticker("BTC-USD")
+                    eth_ticker = await provider.get_ticker("ETH-USD")
+                    if btc_ticker and btc_ticker.get("price", 0) > 0:
+                        btc_price = float(btc_ticker["price"])
+                    if eth_ticker and eth_ticker.get("price", 0) > 0:
+                        eth_price = float(eth_ticker["price"])
+                    print(f"[P0.6] Using REAL prices: BTC=${btc_price:,.2f}, ETH=${eth_price:,.2f}")
+                except Exception as e:
+                    print(f"[P0.6] Coinbase failed, using defaults: {e}")
+                
+                btc_qty = round(5000.0 / btc_price, 6)
+                eth_qty = round(3500.0 / eth_price, 4)
+                
+                # Create BTC position with real price
                 btc_req = CaseCreateRequest(
                     symbol="BTCUSDT",
                     side="LONG",
-                    entry_price=71000.0,
-                    qty=0.08,
-                    size_usd=5680.0,
+                    entry_price=btc_price,
+                    qty=btc_qty,
+                    size_usd=round(btc_price * btc_qty, 2),
                     strategy="Momentum",
                     trading_tf="4h",
                     thesis="Auto-seeded BTC demo position",
                     decision_id="demo-btc-1"
                 )
                 btc_case = await case_service.create_case(btc_req)
-                # Skip actual order execution during seeding (demo data only)
-                # await case_service.execute_order(...) - requires live exchange connection
                 
-                # Create ETH position
+                # Create ETH position with real price
                 eth_req = CaseCreateRequest(
                     symbol="ETHUSDT",
                     side="LONG",
-                    entry_price=3600.0,
-                    qty=1.0,
-                    size_usd=3600.0,
+                    entry_price=eth_price,
+                    qty=eth_qty,
+                    size_usd=round(eth_price * eth_qty, 2),
                     strategy="Breakout",
                     trading_tf="1h",
                     thesis="Auto-seeded ETH demo position",
                     decision_id="demo-eth-1"
                 )
                 eth_case = await case_service.create_case(eth_req)
-                # Skip actual order execution during seeding (demo data only)
                 
                 # Initial sync
                 await case_service.sync_positions()

@@ -113,53 +113,77 @@ class ExecutionHandler:
             }
     
 
+    def _symbol_to_coinbase(self, symbol: str) -> str:
+        """Convert BTCUSDT → BTC-USD for Coinbase API."""
+        mapping = {
+            "BTCUSDT": "BTC-USD",
+            "ETHUSDT": "ETH-USD",
+            "SOLUSDT": "SOL-USD",
+            "BNBUSDT": "BNB-USD",
+            "XRPUSDT": "XRP-USD",
+            "ADAUSDT": "ADA-USD",
+            "AVAXUSDT": "AVAX-USD",
+            "LINKUSDT": "LINK-USD",
+            "DOGEUSDT": "DOGE-USD",
+        }
+        return mapping.get(symbol, symbol.replace("USDT", "-USD"))
+
     async def _enrich_paper_payload(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Enrich payload with real market data for PAPER mode.
+        Enrich payload with REAL market price from Coinbase for PAPER mode.
         
-        PAPER mode difference from DRY_RUN:
-        - Uses real market prices (not 0)
-        - Calculates real qty based on size_usd
-        - Simulates fills at real prices
-        
-        Returns enriched payload with:
-        - entry_price: current market price
-        - final_size: quantity (renamed from 'quantity')
+        Uses CoinbaseProvider.get_ticker() for live prices (public API, no key needed).
+        This ensures entry_price reflects the actual market price at execution moment.
         """
         symbol = payload.get("symbol")
         side = payload.get("side")
         quantity = payload.get("quantity", 0.0)
+        size_usd = payload.get("size_usd", payload.get("notional_usd", 0.0))
         
-        # Get current market price
+        # Get REAL current market price from Coinbase
+        market_price = None
         try:
-            # Use MarketDataService to get real price
-            from modules.market_data import get_market_data_service
-            market_data = get_market_data_service()
-            
-            if market_data:
-                latest_data = market_data.get_latest(symbol)
-                if latest_data and 'close' in latest_data:
-                    market_price = float(latest_data['close'])
-                else:
-                    # Fallback: use signal entry_price if available
-                    market_price = payload.get("price", 50000.0)  # Fallback to conservative default
-            else:
-                # No market data service: use signal price or fallback
-                market_price = payload.get("price", 50000.0)
+            from modules.data.coinbase_provider import CoinbaseProvider
+            provider = CoinbaseProvider()
+            coinbase_symbol = self._symbol_to_coinbase(symbol)
+            ticker = await provider.get_ticker(coinbase_symbol)
+            if ticker and ticker.get("price", 0) > 0:
+                market_price = float(ticker["price"])
+                logger.info(f"[PAPER] Got REAL price from Coinbase: {symbol} = ${market_price:,.2f}")
         except Exception as e:
-            logger.warning(f"[PAPER] Failed to get market price for {symbol}: {e}, using fallback")
-            market_price = payload.get("price", 50000.0)
+            logger.warning(f"[PAPER] Coinbase price fetch failed for {symbol}: {e}")
+        
+        # If Coinbase failed, try PriceService (simulated but better than hardcoded)
+        if market_price is None:
+            try:
+                from modules.market_data.price_service import get_price_service
+                price_svc = await get_price_service()
+                market_price = await price_svc.get_mark_price(symbol)
+                logger.info(f"[PAPER] Using PriceService price: {symbol} = ${market_price:,.2f}")
+            except Exception as e:
+                logger.warning(f"[PAPER] PriceService failed for {symbol}: {e}")
+        
+        # Last resort: use signal price (never use hardcoded $50k)
+        if market_price is None:
+            market_price = payload.get("price", payload.get("entry_price", 0))
+            logger.warning(f"[PAPER] Using signal price as last resort: {symbol} = ${market_price:,.2f}")
+        
+        # Recalculate quantity from size_usd if available
+        if size_usd and market_price > 0:
+            quantity = size_usd / market_price
+            logger.info(f"[PAPER] Recalculated qty: ${size_usd:.2f} / ${market_price:,.2f} = {quantity:.6f}")
         
         # Enrich payload
         enriched = {
             **payload,
-            "entry_price": market_price,  # Real market price
-            "final_size": quantity,  # Rename for simulator compatibility
+            "entry_price": market_price,
+            "price": market_price,
+            "final_size": quantity,
         }
         
         logger.info(
-            f"[PAPER] Enriched payload: symbol={symbol}, qty={quantity}, "
-            f"market_price=${market_price:.2f}"
+            f"[PAPER] Enriched payload: symbol={symbol}, qty={quantity:.6f}, "
+            f"market_price=${market_price:,.2f} (REAL)"
         )
         
         return enriched

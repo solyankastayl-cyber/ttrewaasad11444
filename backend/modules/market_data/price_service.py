@@ -48,11 +48,11 @@ class PriceService:
         self.cache: Dict[str, dict] = {}
         self.cache_lock = asyncio.Lock()
         
-        # Base prices (будут колебаться ±0.5% каждый запрос)
+        # Base prices (realistic current market levels, updated Apr 2026)
         self.base_prices = {
-            "BTCUSDT": 95234.56,
-            "ETHUSDT": 3456.78,
-            "SOLUSDT": 198.45,
+            "BTCUSDT": 74000.0,
+            "ETHUSDT": 2325.0,
+            "SOLUSDT": 83.60,
             "BNBUSDT": 612.34,
             "XRPUSDT": 2.34,
             "ADAUSDT": 0.98,

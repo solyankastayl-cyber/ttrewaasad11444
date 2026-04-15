@@ -55,6 +55,34 @@ class PaperExchangeAdapter(ExchangeAdapter):
             logger.info(f"[PaperAdapter] Created account {self.account_id} with ${self.initial_balance}")
         
         self.connected = True
+        
+        # Load persisted positions from DB into in-memory dict
+        try:
+            db_positions = await self.db.exchange_positions.find(
+                {"account_id": self.account_id, "status": "OPEN"}
+            ).to_list(length=100)
+            for p in db_positions:
+                symbol = p.get("symbol")
+                if symbol and symbol not in self.positions:
+                    self.positions[symbol] = Position(
+                        symbol=symbol,
+                        side=p.get("side", "LONG"),
+                        qty=p.get("qty", p.get("size", 0)),
+                        entry_price=p.get("entry_price", 0),
+                        mark_price=p.get("mark_price", p.get("entry_price", 0)),
+                        unrealized_pnl=p.get("unrealized_pnl", 0),
+                        unrealized_pnl_pct=p.get("unrealized_pnl_pct", 0),
+                        realized_pnl=p.get("realized_pnl", 0),
+                        leverage=p.get("leverage", 1),
+                        status="OPEN",
+                        liquidation_price=p.get("liquidation_price"),
+                        opened_at=p.get("opened_at"),
+                    )
+            if self.positions:
+                logger.info(f"[PaperAdapter] Loaded {len(self.positions)} positions from DB")
+        except Exception as e:
+            logger.warning(f"[PaperAdapter] Failed to load positions from DB: {e}")
+        
         return True
 
     async def get_account_info(self) -> AccountInfo:
@@ -90,6 +118,27 @@ class PaperExchangeAdapter(ExchangeAdapter):
                 total=account["balance_usdt"],
             )
         ]
+
+    async def _persist_position(self, pos: Position):
+        """Persist position state to DB for restart recovery."""
+        try:
+            await self.db.exchange_positions.update_one(
+                {"account_id": self.account_id, "symbol": pos.symbol},
+                {"$set": {
+                    "account_id": self.account_id,
+                    "symbol": pos.symbol, "side": pos.side,
+                    "qty": pos.qty, "entry_price": pos.entry_price,
+                    "mark_price": pos.mark_price,
+                    "unrealized_pnl": pos.unrealized_pnl,
+                    "unrealized_pnl_pct": pos.unrealized_pnl_pct,
+                    "realized_pnl": pos.realized_pnl,
+                    "leverage": pos.leverage, "status": pos.status,
+                    "liquidation_price": pos.liquidation_price,
+                }},
+                upsert=True,
+            )
+        except Exception as e:
+            logger.warning(f"[PaperAdapter] Failed to persist position {pos.symbol}: {e}")
 
     async def get_positions(self, symbol: Optional[str] = None) -> List[Position]:
         """Get normalized positions."""
@@ -239,6 +288,7 @@ class PaperExchangeAdapter(ExchangeAdapter):
                     opened_at=datetime.now(timezone.utc),
                 )
                 logger.info(f"[PaperAdapter] Created LONG position: {symbol} qty={qty} entry=${price}")
+                await self._persist_position(self.positions[symbol])
         
         elif side == "SELL":
             # Reduce or close LONG position
@@ -256,6 +306,13 @@ class PaperExchangeAdapter(ExchangeAdapter):
                     if pos.qty <= 0:
                         # Position fully closed
                         logger.info(f"[PaperAdapter] Closed LONG position: {symbol} realized_pnl=${pos.realized_pnl:.2f}")
+                        try:
+                            await self.db.exchange_positions.update_one(
+                                {"account_id": self.account_id, "symbol": symbol},
+                                {"$set": {"status": "CLOSED"}},
+                            )
+                        except Exception:
+                            pass
                         del self.positions[symbol]
                     else:
                         # Position partially closed
@@ -263,6 +320,7 @@ class PaperExchangeAdapter(ExchangeAdapter):
                         pos.unrealized_pnl = (pos.mark_price - pos.entry_price) * pos.qty
                         pos.unrealized_pnl_pct = (pos.unrealized_pnl / (pos.entry_price * pos.qty)) * 100
                         logger.info(f"[PaperAdapter] Reduced LONG position: {symbol} qty={pos.qty} unrealized_pnl=${pos.unrealized_pnl:.2f}")
+                        await self._persist_position(pos)
                 else:
                     # TODO: Handle SHORT position (add to SHORT)
                     logger.warning(f"[PaperAdapter] SHORT position handling not implemented yet")
@@ -310,35 +368,68 @@ class PaperExchangeAdapter(ExchangeAdapter):
         
         return result.modified_count
 
+    def _symbol_to_coinbase(self, symbol: str) -> str:
+        """Convert BTCUSDT → BTC-USD for Coinbase API."""
+        mapping = {
+            "BTCUSDT": "BTC-USD", "ETHUSDT": "ETH-USD", "SOLUSDT": "SOL-USD",
+            "BNBUSDT": "BNB-USD", "XRPUSDT": "XRP-USD", "ADAUSDT": "ADA-USD",
+            "AVAXUSDT": "AVAX-USD", "LINKUSDT": "LINK-USD", "DOGEUSDT": "DOGE-USD",
+        }
+        return mapping.get(symbol, symbol.replace("USDT", "-USD"))
+
     async def get_mark_price(self, symbol: str) -> float:
         """
-        Get current mark price.
-        
-        For paper trading, simulate price movement.
+        Get current mark price from Coinbase (real market price).
+        Falls back to position mark_price or cached price if API fails.
         """
-        # If we have an open position, return current mark price (updated in sync)
+        # Try Coinbase first for REAL price
+        try:
+            from modules.data.coinbase_provider import CoinbaseProvider
+            provider = CoinbaseProvider()
+            coinbase_symbol = self._symbol_to_coinbase(symbol)
+            ticker = await provider.get_ticker(coinbase_symbol)
+            if ticker and ticker.get("price", 0) > 0:
+                return float(ticker["price"])
+        except Exception as e:
+            logger.debug(f"[PaperAdapter] Coinbase price failed for {symbol}: {e}")
+        
+        # Fallback: use position's last mark price
         if symbol in self.positions:
-            pos = self.positions[symbol]
-            return pos.mark_price
+            return self.positions[symbol].mark_price
         
-        # Default mock prices for common symbols
-        mock_prices = {
-            "BTCUSDT": 70000.0,
-            "ETHUSDT": 3500.0,
-            "SOLUSDT": 150.0,
-        }
+        # Last resort: try PriceService (simulated)
+        try:
+            from modules.market_data.price_service import get_price_service
+            svc = await get_price_service()
+            return await svc.get_mark_price(symbol)
+        except Exception:
+            pass
         
-        return mock_prices.get(symbol, 100.0)
+        return 0.0
     
     async def update_mark_prices(self):
         """
-        Update mark prices for all open positions.
-        
-        Simulates market price movement (+0.5% per sync).
+        Update mark prices for all open positions using REAL Coinbase prices.
         """
+        # Batch fetch real prices for all position symbols
+        real_prices = {}
+        try:
+            from modules.data.coinbase_provider import CoinbaseProvider
+            provider = CoinbaseProvider()
+            for symbol in list(self.positions.keys()):
+                try:
+                    coinbase_symbol = self._symbol_to_coinbase(symbol)
+                    ticker = await provider.get_ticker(coinbase_symbol)
+                    if ticker and ticker.get("price", 0) > 0:
+                        real_prices[symbol] = float(ticker["price"])
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.warning(f"[PaperAdapter] Failed to fetch Coinbase prices: {e}")
+        
         for symbol, pos in self.positions.items():
-            # Simulate price movement: +0.5% increase each sync
-            pos.mark_price = pos.mark_price * 1.005
+            if symbol in real_prices:
+                pos.mark_price = real_prices[symbol]
             
             # Recalculate unrealized PnL
             if pos.side == "LONG":
@@ -349,6 +440,9 @@ class PaperExchangeAdapter(ExchangeAdapter):
             # Calculate unrealized PnL %
             if pos.entry_price > 0:
                 pos.unrealized_pnl_pct = (pos.unrealized_pnl / (pos.entry_price * pos.qty)) * 100
+            
+            # Persist updated position
+            await self._persist_position(pos)
             
             logger.debug(f"[PaperAdapter] Updated {symbol}: mark=${pos.mark_price:.2f} pnl=${pos.unrealized_pnl:.2f}")
 

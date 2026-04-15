@@ -77,21 +77,23 @@ class PositionSyncService:
                 )
             
             # Mark positions that disappeared as CLOSED
-            cursor = self.col.find({"status": "OPEN"})
-            existing = await cursor.to_list(length=100)
-            
-            for row in existing:
-                if row["symbol"] not in seen_symbols:
-                    await self.col.update_one(
-                        {"_id": row["_id"]},
-                        {
-                            "$set": {
-                                "status": "CLOSED",
-                                "closed_at": now_ms,
-                            }
-                        },
-                    )
-                    logger.info(f"[PositionSyncService] Position closed: {row['symbol']}")
+            # Skip destructive sync when exchange returns 0 positions (adapter restart/no data)
+            if seen_symbols:
+                cursor = self.col.find({"status": "OPEN"})
+                existing = await cursor.to_list(length=100)
+                
+                for row in existing:
+                    if row["symbol"] not in seen_symbols:
+                        await self.col.update_one(
+                            {"_id": row["_id"]},
+                            {
+                                "$set": {
+                                    "status": "CLOSED",
+                                    "closed_at": now_ms,
+                                }
+                            },
+                        )
+                        logger.info(f"[PositionSyncService] Position closed: {row['symbol']}")
             
             logger.info(f"[PositionSyncService] Sync complete: {len(positions)} open positions")
             

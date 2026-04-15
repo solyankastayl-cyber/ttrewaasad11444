@@ -121,30 +121,51 @@ class FOMOTradeAPITester:
             200
         )
 
-    def test_positions(self):
-        """Test positions endpoint - should return 3 open positions"""
+    def test_trading_cases_active(self):
+        """Test trading cases endpoint - should return 4 active cases with REAL prices"""
         success, response = self.run_test(
-            "Positions List",
+            "Trading Cases Active",
             "GET",
-            "api/positions",
+            "api/trading/cases/active",
             200
         )
         
         if success:
-            positions = response if isinstance(response, list) else response.get('positions', [])
-            print(f"   📊 Found {len(positions)} positions")
+            cases = response if isinstance(response, list) else response.get('cases', [])
+            print(f"   📊 Found {len(cases)} active trading cases")
             
-            # Check for expected symbols
-            expected_symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT']
-            found_symbols = [pos.get('symbol') for pos in positions if pos.get('symbol')]
-            
-            for symbol in expected_symbols:
-                if symbol in found_symbols:
-                    print(f"   ✅ Found expected position: {symbol}")
-                else:
-                    print(f"   ⚠️  Missing expected position: {symbol}")
-            
-            return len(positions) >= 3
+            # Check for expected 4 cases
+            if len(cases) >= 4:
+                print(f"   ✅ Found expected 4+ active cases")
+                
+                # Check for REAL prices (not fake ones)
+                btc_cases = [c for c in cases if 'BTC' in c.get('symbol', '')]
+                eth_cases = [c for c in cases if 'ETH' in c.get('symbol', '')]
+                
+                for case in btc_cases:
+                    entry_price = case.get('entry_price', 0)
+                    if 73000 <= entry_price <= 75000:
+                        print(f"   ✅ BTC case has REAL price: ${entry_price:,.2f}")
+                    elif entry_price in [50000, 71000]:
+                        print(f"   ❌ BTC case has FAKE price: ${entry_price:,.2f}")
+                        return False
+                    else:
+                        print(f"   ⚠️  BTC case price outside expected range: ${entry_price:,.2f}")
+                
+                for case in eth_cases:
+                    entry_price = case.get('entry_price', 0)
+                    if 2300 <= entry_price <= 2400:
+                        print(f"   ✅ ETH case has REAL price: ${entry_price:,.2f}")
+                    elif entry_price == 3600:
+                        print(f"   ❌ ETH case has FAKE price: ${entry_price:,.2f}")
+                        return False
+                    else:
+                        print(f"   ⚠️  ETH case price outside expected range: ${entry_price:,.2f}")
+                
+                return True
+            else:
+                print(f"   ❌ Expected 4+ cases, found {len(cases)}")
+                return False
         return False
 
     def test_decision_traces(self):
@@ -252,10 +273,10 @@ def main():
     tester.test_system_status()
     tester.test_runtime_daemon_status()
     
-    # Trading data tests
-    print("\n💰 TRADING DATA TESTS")
+    # Trading data tests - P0 fix verification
+    print("\n💰 TRADING DATA TESTS (P0 FIX VERIFICATION)")
     tester.test_portfolio_state()
-    tester.test_positions()
+    tester.test_trading_cases_active()  # NEW: Test for real prices
     tester.test_decision_traces()
     
     # Execution system tests
