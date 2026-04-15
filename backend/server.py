@@ -1193,6 +1193,32 @@ async def lifespan(app: FastAPI):
         import traceback
         traceback.print_exc()
     
+
+    # Signal Generator Runner (Шаг B: Auto-генерация решений)
+    try:
+        from modules.signal_generator.runner import get_runner
+        from modules.runtime.service_locator import get_runtime_service
+        from modules.market_data_live import get_market_data_service
+        
+        runtime_svc = get_runtime_service()
+        market_data_svc = get_market_data_service()
+        
+        if runtime_svc and market_data_svc:
+            signal_runner = get_runner(
+                runtime_service=runtime_svc,
+                market_data_service=market_data_svc
+            )
+            
+            await signal_runner.start()
+            
+            print("[SignalGenerator] ✅ Auto-signal generator started (30s interval)")
+        else:
+            print("[SignalGenerator] Skipped: RuntimeService or MarketData not available")
+    except Exception as e:
+        print(f"[SignalGenerator] Initialization failed: {e}")
+        import traceback
+        traceback.print_exc()
+
     # P0.LEGACY — AutoTrading Service (DISABLED)
     try:
         from modules.trading_core.autotrading_service import init_autotrading_service
