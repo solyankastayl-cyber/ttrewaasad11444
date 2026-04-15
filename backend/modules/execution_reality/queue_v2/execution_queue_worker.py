@@ -188,9 +188,7 @@ class ExecutionQueueWorker:
             
             if result.get("success"):
                 # Paper Trading Integration: Create Position after FILLED
-                print(f"[DEBUG] Worker {self.worker_id}: Execution success, calling _handle_fill...")
                 await self._handle_fill(job, result)
-                print(f"[DEBUG] Worker {self.worker_id}: _handle_fill completed")
                 
                 # Success: mark acked
                 ack_success = await self.queue_repo.mark_acked(
@@ -270,35 +268,24 @@ class ExecutionQueueWorker:
         
         Paper Trading Integration Point.
         """
-        import sys
-        print(f"[FILL] _handle_fill CALLED for job_id={job.jobId}", file=sys.stderr, flush=True)
-        
         try:
             # Get TradingCaseService
             from modules.trading_cases.service import get_trading_case_service
             from modules.trading_cases.models import CaseCreateRequest
             from modules.execution_logger import get_execution_logger
             
-            print(f"[FILL] Imports OK", file=sys.stderr, flush=True)
-            
             trading_case_service = get_trading_case_service()
             execution_logger = get_execution_logger()
-            
-            print(f"[FILL] Services obtained", file=sys.stderr, flush=True)
             
             # Extract decision_id from payload
             decision_id = job.payload.get("decision_id")
             strategy = job.payload.get("strategy", "QUEUE_EXECUTION")
             timeframe = job.payload.get("timeframe", "1h")
             
-            print(f"[FILL] decision_id={decision_id}, strategy={strategy}", file=sys.stderr, flush=True)
-            
             # Parse execution result
             filled_qty = execution_result.get("filled_qty", job.payload.get("quantity", 0.001))
             fill_price = execution_result.get("avg_price", job.payload.get("price", 0.0))
             order_id = execution_result.get("order_id")
-            
-            print(f"[FILL] filled_qty={filled_qty}, fill_price={fill_price}", file=sys.stderr, flush=True)
             
             # Calculate size_usd
             size_usd = filled_qty * fill_price
@@ -316,13 +303,9 @@ class ExecutionQueueWorker:
                 decision_id=decision_id
             )
             
-            print(f"[FILL] CaseCreateRequest created, calling create_case...", file=sys.stderr, flush=True)
-            
             try:
                 case = await trading_case_service.create_case(case_request)
-                print(f"[FILL] Position created: case_id={case.case_id}", file=sys.stderr, flush=True)
             except Exception as create_error:
-                print(f"[FILL] ERROR creating case: {create_error}", file=sys.stderr, flush=True)
                 raise
             
             logger.info(

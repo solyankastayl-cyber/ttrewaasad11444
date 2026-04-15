@@ -161,7 +161,83 @@ class TradingCaseService:
         
         logger.info(f"[TradingCaseService] Closed case {case_id}: {close_request.close_reason}, PnL=${final_pnl:.2f}")
         
+        # Paper Trading: Write Outcome (CHECK 2, 3, 4)
+        await self._write_decision_outcome(case, close_request.close_price)
+        
         return case
+    
+    async def _write_decision_outcome(self, case: TradingCase, close_price: float):
+        """
+        Write decision outcome to decision_outcomes collection.
+        
+        Paper Trading Integration: Links Position → Outcome → Analytics
+        
+        Guarantees:
+        - 1 position = 1 outcome (idempotent via upsert)
+        - Outcome linked to decision_id and case_id
+        - Analytics can read outcome
+        """
+        if not case.decision_id:
+            logger.warning(f"[TradingCaseService] Case {case.case_id} has no decision_id, skipping outcome")
+            return
+        
+        try:
+            # Get MongoDB from repository
+            db = self.repo.db
+            if db is None:
+                logger.error("[TradingCaseService] No MongoDB connection for outcome writing")
+                return
+            
+            # Calculate PnL percentage
+            if case.avg_entry_price > 0:
+                if case.side == "LONG":
+                    pnl_pct = ((close_price - case.avg_entry_price) / case.avg_entry_price) * 100
+                else:  # SHORT
+                    pnl_pct = ((case.avg_entry_price - close_price) / case.avg_entry_price) * 100
+            else:
+                pnl_pct = 0.0
+            
+            # Determine win/loss
+            is_win = case.realized_pnl > 0
+            
+            # Create outcome document
+            outcome = {
+                "decision_id": case.decision_id,
+                "case_id": case.case_id,
+                "symbol": case.symbol,
+                "side": case.side,
+                "strategy": case.strategy,
+                "entry_price": case.avg_entry_price,
+                "exit_price": close_price,
+                "qty": case.qty,
+                "pnl_usd": case.realized_pnl,
+                "pnl_pct": pnl_pct,
+                "is_win": is_win,
+                "opened_at": case.opened_at.isoformat() if case.opened_at else None,
+                "closed_at": case.closed_at.isoformat() if case.closed_at else None,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            
+            # Upsert (prevent duplicates)
+            collection = db["decision_outcomes"]
+            result = collection.replace_one(
+                {"case_id": case.case_id},
+                outcome,
+                upsert=True
+            )
+            
+            logger.info(
+                f"✅ [TradingCaseService] Outcome written: "
+                f"decision_id={case.decision_id}, case_id={case.case_id}, "
+                f"pnl=${case.realized_pnl:.2f} ({pnl_pct:+.2f}%), "
+                f"win={is_win}"
+            )
+            
+        except Exception as e:
+            logger.error(
+                f"❌ [TradingCaseService] Failed to write outcome for case {case.case_id}: {e}",
+                exc_info=True
+            )
     
     # =========================
     # EXECUTE ORDER

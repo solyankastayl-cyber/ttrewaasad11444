@@ -66,10 +66,6 @@ class ExecutionHandler:
                     trace_id=trace_id,
                     payload=payload
                 )
-                
-                import sys
-                print(f"[EXEC] DRY_RUN result: success={result.get('success')}", file=sys.stderr, flush=True)
-                
                 return result
             
             elif self.mode == "REAL":
