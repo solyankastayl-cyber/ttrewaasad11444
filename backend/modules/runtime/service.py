@@ -468,58 +468,58 @@ class RuntimeService:
                             f"R1={r1_multiplier:.2f} × R2={r2_result['multiplier']:.2f} = {final_multiplier:.2f}, "
                             f"final_qty={signal['sizing']['qty']:.4f}"
                         )
-                        
-                        # Sprint 2: Trace — R2 adaptive
-                        trace.add_step("R2_ADAPTIVE", {
-                            "r2_multiplier": r2_result["multiplier"],
-                            "final_multiplier": final_multiplier,
-                            "final_qty": signal["sizing"]["qty"],
-                            "components": r2_result.get("components", {}),
-                        })
-                        
-                        # Update debug dict with R2 data
-                        signal["sizing"]["debug"]["r2_multiplier"] = r2_result["multiplier"]
-                        signal["sizing"]["debug"]["r2_components"] = r2_result["components"]
-                        signal["sizing"]["debug"]["r2_debug"] = r2_result["debug"]
-                        signal["sizing"]["debug"]["final_multiplier"] = final_multiplier
-                        
-                    except RuntimeError as e:
-                        # AdaptiveRiskService not initialized (e.g., during tests)
-                        logger.warning(f"ADAPTIVE_RISK_SERVICE_NOT_INITIALIZED — skipping R2: {e}")
-                        # Default: R2 = 1.0 (no adjustment)
-                        signal["sizing"]["r2"] = {
-                            "multiplier": 1.0,
-                            "components": {"drawdown": 1.0, "loss_streak": 1.0},
-                            "debug": {"drawdown_pct": 0.0, "loss_streak_count": 0}
-                        }
-                        signal["sizing"]["r2_multiplier"] = 1.0
-                        signal["sizing"]["final_multiplier"] = signal["sizing"]["size_multiplier"]
-                        
-                        # Update debug
-                        signal["sizing"]["debug"]["r2_multiplier"] = 1.0
-                        signal["sizing"]["debug"]["r2_components"] = {"drawdown": 1.0, "loss_streak": 1.0}
-                        signal["sizing"]["debug"]["r2_debug"] = {"drawdown_pct": 0.0, "loss_streak_count": 0}
-                        signal["sizing"]["debug"]["final_multiplier"] = signal["sizing"]["size_multiplier"]
-                        
-                    except Exception as e:
-                        # Catch ANY exception to prevent R2 from silently failing
-                        logger.error(f"[R2] UNEXPECTED ERROR: {type(e).__name__}: {e}")
-                        import traceback
-                        traceback.print_exc()
-                        # Default: R2 = 1.0 (no adjustment)
-                        signal["sizing"]["r2"] = {
-                            "multiplier": 1.0,
-                            "components": {"drawdown": 1.0, "loss_streak": 1.0},
-                            "debug": {"drawdown_pct": 0.0, "loss_streak_count": 0}
-                        }
-                        signal["sizing"]["r2_multiplier"] = 1.0
-                        signal["sizing"]["final_multiplier"] = signal["sizing"]["size_multiplier"]
-                        
-                        # Update debug
-                        signal["sizing"]["debug"]["r2_multiplier"] = 1.0
-                        signal["sizing"]["debug"]["r2_components"] = {"drawdown": 1.0, "loss_streak": 1.0}
-                        signal["sizing"]["debug"]["r2_debug"] = {"drawdown_pct": 0.0, "loss_streak_count": 0}
-                        signal["sizing"]["debug"]["final_multiplier"] = signal["sizing"]["size_multiplier"]
+                            
+                            # Sprint 2: Trace — R2 adaptive
+                            trace.add_step("R2_ADAPTIVE", {
+                                "r2_multiplier": r2_result["multiplier"],
+                                "final_multiplier": final_multiplier,
+                                "final_qty": signal["sizing"]["qty"],
+                                "components": r2_result.get("components", {}),
+                            })
+                            
+                            # Update debug dict with R2 data
+                            signal["sizing"]["debug"]["r2_multiplier"] = r2_result["multiplier"]
+                            signal["sizing"]["debug"]["r2_components"] = r2_result["components"]
+                            signal["sizing"]["debug"]["r2_debug"] = r2_result["debug"]
+                            signal["sizing"]["debug"]["final_multiplier"] = final_multiplier
+                            
+                        except RuntimeError as e:
+                            # AdaptiveRiskService not initialized (e.g., during tests)
+                            logger.warning(f"ADAPTIVE_RISK_SERVICE_NOT_INITIALIZED — skipping R2: {e}")
+                            # Default: R2 = 1.0 (no adjustment)
+                            signal["sizing"]["r2"] = {
+                                "multiplier": 1.0,
+                                "components": {"drawdown": 1.0, "loss_streak": 1.0},
+                                "debug": {"drawdown_pct": 0.0, "loss_streak_count": 0}
+                            }
+                            signal["sizing"]["r2_multiplier"] = 1.0
+                            signal["sizing"]["final_multiplier"] = signal["sizing"]["size_multiplier"]
+                            
+                            # Update debug
+                            signal["sizing"]["debug"]["r2_multiplier"] = 1.0
+                            signal["sizing"]["debug"]["r2_components"] = {"drawdown": 1.0, "loss_streak": 1.0}
+                            signal["sizing"]["debug"]["r2_debug"] = {"drawdown_pct": 0.0, "loss_streak_count": 0}
+                            signal["sizing"]["debug"]["final_multiplier"] = signal["sizing"]["size_multiplier"]
+                            
+                        except Exception as e:
+                            # Catch ANY exception to prevent R2 from silently failing
+                            logger.error(f"[R2] UNEXPECTED ERROR: {type(e).__name__}: {e}")
+                            import traceback
+                            traceback.print_exc()
+                            # Default: R2 = 1.0 (no adjustment)
+                            signal["sizing"]["r2"] = {
+                                "multiplier": 1.0,
+                                "components": {"drawdown": 1.0, "loss_streak": 1.0},
+                                "debug": {"drawdown_pct": 0.0, "loss_streak_count": 0}
+                            }
+                            signal["sizing"]["r2_multiplier"] = 1.0
+                            signal["sizing"]["final_multiplier"] = signal["sizing"]["size_multiplier"]
+                            
+                            # Update debug
+                            signal["sizing"]["debug"]["r2_multiplier"] = 1.0
+                            signal["sizing"]["debug"]["r2_components"] = {"drawdown": 1.0, "loss_streak": 1.0}
+                            signal["sizing"]["debug"]["r2_debug"] = {"drawdown_pct": 0.0, "loss_streak_count": 0}
+                            signal["sizing"]["debug"]["final_multiplier"] = signal["sizing"]["size_multiplier"]
                     
                     # Sprint A4: AUTO Safety Gate (AFTER R2)
                     from modules.auto_safety.service_locator import get_auto_safety_service

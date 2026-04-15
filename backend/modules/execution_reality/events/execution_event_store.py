@@ -75,7 +75,18 @@ class ExecutionEventStore:
         cursor = self.collection.find({}).sort("timestamp", 1).limit(limit)
         events = await cursor.to_list(length=limit)
         logger.info(f"Loaded {len(events)} events for rebuild")
-        return [ExecutionEvent(**event) for event in events]
+        
+        # Filter out invalid events (legacy data from pre-schema migrations)
+        valid_events = []
+        for event in events:
+            try:
+                valid_events.append(ExecutionEvent(**event))
+            except Exception as e:
+                logger.warning(f"Skipping invalid event {event.get('_id')}: {e}")
+                continue
+        
+        logger.info(f"✅ Validated {len(valid_events)}/{len(events)} events (skipped {len(events) - len(valid_events)} invalid)")
+        return valid_events
 
     async def ensure_indexes(self):
         """Создать необходимые индексы (в том числе unique event_id для idempotency)"""
