@@ -65,10 +65,11 @@ class ExecutionWorkerManager:
         # Retry scheduler
         self.retry_scheduler: Optional[ExecutionRetryScheduler] = None
         
-        # Submit simulator (DRY-RUN с P1.3.2B retry testing)
+        # Submit simulator (DRY-RUN/PAPER с P1.3.2B retry testing)
+        # PAPER mode: failure_rate=0 for clean testing
         self.submit_simulator = ExecutionSubmitSimulator(
             simulate_latency_ms=100,
-            failure_rate=0.12 if config.mixed_mode else 0.0  # P1.3.2B: 12% failure rate
+            failure_rate=0.0  # Disabled for PAPER mode testing
         )
         
         logger.info(
