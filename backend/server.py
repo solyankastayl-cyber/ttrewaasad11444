@@ -2232,6 +2232,11 @@ except Exception as e:
 try:
     from modules.audit.audit_routes import router as audit_router
     app.include_router(audit_router)
+
+    # System Status (Step C: Minimal Observability)
+    from modules.system_status import router as system_status_router
+    app.include_router(system_status_router, prefix="/api/system", tags=["System"])
+
     print("[Routes] ✅ Audit Trail (P0.7) router registered")
 except Exception as e:
     print(f"[Routes] Audit Trail not available: {e}")

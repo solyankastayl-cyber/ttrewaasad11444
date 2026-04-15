@@ -3,6 +3,7 @@ Runtime Service — Orchestrator (Sprint 2: with Decision Trace)
 """
 
 import logging
+import os
 from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
@@ -410,44 +411,60 @@ class RuntimeService:
                         signal["sizing"] = {"qty": 0.001, "notional_usd": 50, "size_multiplier": 1.0, "debug": {}}
                     
                     # Phase 5: R2 Adaptive Risk Engine (AFTER R1, BEFORE AutoSafety)
-                    from modules.adaptive_risk.service import get_adaptive_risk_service
+                    # STEP C: DISABLE during first 50 trades
+                    adaptation_disabled = os.getenv("DISABLE_ADAPTATION", "false").lower() == "true"
                     
-                    try:
-                        adaptive_risk = get_adaptive_risk_service()
+                    if adaptation_disabled:
+                        # Lock R2: use neutral multiplier (1.0)
+                        logger.info("[R2] DISABLED (first 50 trades baseline mode)")
+                        signal["sizing"]["r2"] = {
+                            "multiplier": 1.0,
+                            "reason": "DISABLED_BASELINE_MODE",
+                            "components": {},
+                            "debug": {}
+                        }
+                        signal["sizing"]["r2_multiplier"] = 1.0
+                        signal["sizing"]["final_multiplier"] = signal["sizing"]["size_multiplier"]  # R1 only
+                    else:
+                        # Normal R2 evaluation
+                        from modules.adaptive_risk.service import get_adaptive_risk_service
                         
-                        # R2 evaluation (context-aware dampening)
-                        r2_result = await adaptive_risk.evaluate(signal)
-                        
-                        # Store R2 result in signal (strict contract)
-                        signal["sizing"]["r2"] = r2_result
-                        signal["sizing"]["r2_multiplier"] = r2_result["multiplier"]
-                        
-                        # Apply R2 multiplier to R1 sizing (multiplicative layer)
-                        r1_multiplier = signal["sizing"]["size_multiplier"]
-                        final_multiplier = r1_multiplier * r2_result["multiplier"]
-                        signal["sizing"]["final_multiplier"] = round(final_multiplier, 4)
-                        
-                        # Apply R2 to notional and qty
-                        signal["sizing"]["notional_usd"] *= r2_result["multiplier"]
-                        signal["sizing"]["qty"] *= r2_result["multiplier"]
-                        
-                        # Clamp qty to minimum exchange precision
-                        signal["sizing"]["qty"] = max(signal["sizing"]["qty"], 0.001)
-                        
-                        # Log R2 application
-                        await self.exec_logger.log_event({
-                            "type": "ADAPTIVE_RISK_APPLIED",
-                            "symbol": signal["symbol"],
-                            "r2_multiplier": r2_result["multiplier"],
-                            "final_multiplier": signal["sizing"]["final_multiplier"],
-                            "final_qty": signal["sizing"]["qty"],
-                            "final_notional_usd": signal["sizing"]["notional_usd"],
-                            "r2_components": r2_result["components"],
-                            "r2_debug": r2_result["debug"],
-                        })
-                        
-                        logger.info(
-                            f"[R2] Applied to {signal['symbol']}: "
+                        try:
+                            adaptive_risk = get_adaptive_risk_service()
+                            
+                            # R2 evaluation (context-aware dampening)
+                            r2_result = await adaptive_risk.evaluate(signal)
+                            
+                            # Store R2 result in signal (strict contract)
+                            signal["sizing"]["r2"] = r2_result
+                            signal["sizing"]["r2_multiplier"] = r2_result["multiplier"]
+                            
+                            # Apply R2 multiplier to R1 sizing (multiplicative layer)
+                            r1_multiplier = signal["sizing"]["size_multiplier"]
+                            final_multiplier = r1_multiplier * r2_result["multiplier"]
+                            signal["sizing"]["final_multiplier"] = round(final_multiplier, 4)
+                            
+                            # Apply R2 to notional and qty
+                            signal["sizing"]["notional_usd"] *= r2_result["multiplier"]
+                            signal["sizing"]["qty"] *= r2_result["multiplier"]
+                            
+                            # Clamp qty to minimum exchange precision
+                            signal["sizing"]["qty"] = max(signal["sizing"]["qty"], 0.001)
+                            
+                            # Log R2 application
+                            await self.exec_logger.log_event({
+                                "type": "ADAPTIVE_RISK_APPLIED",
+                                "symbol": signal["symbol"],
+                                "r2_multiplier": r2_result["multiplier"],
+                                "final_multiplier": signal["sizing"]["final_multiplier"],
+                                "final_qty": signal["sizing"]["qty"],
+                                "final_notional_usd": signal["sizing"]["notional_usd"],
+                                "r2_components": r2_result["components"],
+                                "r2_debug": r2_result["debug"],
+                            })
+                            
+                            logger.info(
+                                f"[R2] Applied to {signal['symbol']}: "
                             f"R1={r1_multiplier:.2f} × R2={r2_result['multiplier']:.2f} = {final_multiplier:.2f}, "
                             f"final_qty={signal['sizing']['qty']:.4f}"
                         )
