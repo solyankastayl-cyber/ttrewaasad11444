@@ -7,6 +7,7 @@ import CaseIntelligenceMinimal from "../trade-case/CaseIntelligenceMinimal";
 import CaseTimelineMinimal from "../trade-case/CaseTimelineMinimal";
 import ChartHeaderOverlay from "../trade-case/ChartHeaderOverlay";
 import ChartMiniStatus from "../trade-case/ChartMiniStatus";
+import ExecutionFeed from "../ExecutionFeed";
 import { useTerminal } from "../../../store/terminalStore";
 import { useTradingCases } from "../../../hooks/useTradingCases";
 
@@ -74,6 +75,11 @@ export default function TradeWorkspace() {
 
       {/* BOTTOM: Timeline (thin strip, 40px) */}
       <CaseTimelineMinimal caseData={selectedCase} />
+      
+      {/* EXECUTION FEED: Live visibility layer */}
+      <div className="border-t border-neutral-200">
+        <ExecutionFeed />
+      </div>
     </div>
   );
 }
