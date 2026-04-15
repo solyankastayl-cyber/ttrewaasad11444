@@ -1,12 +1,8 @@
-import { useMemo, useEffect } from "react";
+import { useEffect } from "react";
 import SmartChartPanel from "../panels/SmartChartPanel";
 import TradeExplainabilityStrip from "../panels/TradeExplainabilityStrip";
 import CaseRailCompact from "../trade-case/CaseRailCompact";
 import CaseCommandHeaderUltraCompact from "../trade-case/CaseCommandHeaderUltraCompact";
-import CaseIntelligenceMinimal from "../trade-case/CaseIntelligenceMinimal";
-import CaseTimelineMinimal from "../trade-case/CaseTimelineMinimal";
-import ChartHeaderOverlay from "../trade-case/ChartHeaderOverlay";
-import ChartMiniStatus from "../trade-case/ChartMiniStatus";
 import ExecutionFeed from "../ExecutionFeed";
 import { useTerminal } from "../../../store/terminalStore";
 import { useTradingCases } from "../../../hooks/useTradingCases";
@@ -15,70 +11,45 @@ export default function TradeWorkspace() {
   const { state, dispatch } = useTerminal();
   const { cases: realCases } = useTradingCases();
 
-  // Auto-select first active case on mount
   useEffect(() => {
     if (!state.selectedCase && realCases.length > 0) {
-      dispatch({
-        type: 'SET_SELECTED_CASE',
-        payload: realCases[0]
-      });
+      dispatch({ type: "SET_SELECTED_CASE", payload: realCases[0] });
     }
   }, [state.selectedCase, dispatch, realCases]);
 
   const selectedCase = state.selectedCase;
 
-  // Check if case has active position
-  const hasPosition = selectedCase?.status === 'ACTIVE';
-
   return (
-    <div className="flex flex-col h-full bg-white" style={{ fontFamily: 'Gilroy, sans-serif' }}>
+    <div className="flex flex-col h-full" data-testid="trade-workspace" style={{ fontFamily: 'Gilroy, sans-serif' }}>
       {/* TOP: Status Strip */}
-      <div className="px-4 py-1.5 border-b border-neutral-200 flex-shrink-0 bg-white">
+      <div className="px-4 py-1.5 border-b border-gray-200 flex-shrink-0 bg-white">
         <TradeExplainabilityStrip />
       </div>
 
-      {/* MAIN CONTENT: Rail + Chart + Intelligence */}
-      <div className="flex flex-1 min-h-0">
-        {/* LEFT: Case Rail (220px, compact watchlist) */}
-        <div className="w-[220px] flex-shrink-0 border-r border-neutral-200">
+      {/* MAIN: Sidebar + Chart — flex row, no overlap */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* LEFT SIDEBAR: Cases list — fixed width */}
+        <div className="w-[260px] flex-shrink-0 border-r border-gray-200 bg-white overflow-y-auto">
           <CaseRailCompact />
         </div>
 
-        {/* CENTER + RIGHT: Chart + Intelligence */}
-        <div className="flex flex-1 flex-col min-w-0">
-          {/* CASE HEADER: Ultra Compact (2 rows) - WITH PADDING FOR RAIL */}
-          <div className="border-b border-neutral-200">
+        {/* RIGHT: Header + Chart + Feed — flex column */}
+        <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
+          {/* Case Header — NOT absolute, NOT overlapping */}
+          <div className="border-b border-gray-200 flex-shrink-0 bg-white">
             <CaseCommandHeaderUltraCompact caseData={selectedCase} />
           </div>
 
-          {/* Chart + Intelligence Row */}
-          <div className="flex flex-1 min-h-0">
-            {/* CENTER: Chart (dominant, with inline header) */}
-            <div className="flex-1 relative bg-white">
-              {/* Chart Header Overlay (inside chart) */}
-              <ChartHeaderOverlay caseData={selectedCase} hasPosition={hasPosition} />
-              
-              {/* Chart Canvas - Clean, no extra wrappers */}
-              <SmartChartPanel hideNoTradeOverlay={true} />
-              
-              {/* Mini Status Overlay (top-right) */}
-              <ChartMiniStatus caseData={selectedCase} />
-            </div>
+          {/* Chart — takes remaining space */}
+          <div className="flex-1 min-h-0 relative">
+            <SmartChartPanel hideNoTradeOverlay={true} />
+          </div>
 
-            {/* RIGHT: Intelligence (300px, minimal) */}
-            <div className="w-[300px] flex-shrink-0 border-l border-neutral-200 overflow-y-auto">
-              <CaseIntelligenceMinimal caseData={selectedCase} />
-            </div>
+          {/* Execution Feed — fixed at bottom */}
+          <div className="flex-shrink-0 border-t border-gray-200 bg-white max-h-[130px] overflow-y-auto">
+            <ExecutionFeed />
           </div>
         </div>
-      </div>
-
-      {/* BOTTOM: Timeline (thin strip, 40px) */}
-      <CaseTimelineMinimal caseData={selectedCase} />
-      
-      {/* EXECUTION FEED: Live visibility layer */}
-      <div className="border-t border-neutral-200">
-        <ExecutionFeed />
       </div>
     </div>
   );

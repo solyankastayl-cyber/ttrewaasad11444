@@ -1,150 +1,113 @@
 import { useState } from "react";
 
-export default function PositionCard({ pos, onReduce, onReverse, onSetTP, onSetSL }) {
-  const [tpValue, setTpValue] = useState("");
-  const [slValue, setSlValue] = useState("");
-
-  const sideColor = pos.side === "LONG" ? "text-green-400" : "text-red-400";
-  const pnlColor = pos.unrealized_pnl >= 0 ? "text-green-400" : "text-red-400";
-
-  const handleTPSubmit = () => {
-    if (tpValue && !isNaN(tpValue)) {
-      onSetTP(pos.symbol, Number(tpValue));
-      setTpValue("");
-    }
-  };
-
-  const handleSLSubmit = () => {
-    if (slValue && !isNaN(slValue)) {
-      onSetSL(pos.symbol, Number(slValue));
-      setSlValue("");
-    }
-  };
+export default function PositionCard({ position, onClose, onReduce, onReverse }) {
+  const [showActions, setShowActions] = useState(false);
+  const p = position;
+  const isLong = p.side === "LONG";
+  const pnl = p.unrealized_pnl || 0;
+  const pnlPct = p.unrealized_pnl_pct || 0;
+  const isProfitable = pnl >= 0;
+  const notional = (p.entry_price || 0) * (p.qty || 0);
 
   return (
-    <div 
-      className="bg-gray-900/60 border border-gray-800 rounded-lg p-4 space-y-3 hover:border-gray-700 transition-colors"
-      data-testid={`position-card-${pos.symbol}`}
+    <div
+      className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-sm transition-shadow"
+      data-testid={`position-card-${p.symbol}`}
+      style={{ fontFamily: 'Gilroy, sans-serif', fontVariantNumeric: 'tabular-nums' }}
     >
       {/* Header */}
-      <div className="flex justify-between items-start">
-        <div>
-          <div className="text-lg font-semibold text-white" data-testid="position-symbol">
-            {pos.symbol}
-          </div>
-          <div className={`text-sm ${sideColor} font-medium`} data-testid="position-side">
-            {pos.side} · {pos.qty}
-          </div>
+      <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between"
+        style={{ borderLeft: `3px solid ${isLong ? '#16a34a' : '#dc2626'}` }}
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-bold text-gray-900">
+            {p.symbol?.replace('USDT', '')}/USDT
+          </span>
+          <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
+            isLong ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+          }`}>
+            {p.side}
+          </span>
         </div>
-
-        <div className="text-right">
-          <div className="text-xs text-gray-400">Unrealized PnL</div>
-          <div className={`text-lg font-semibold ${pnlColor}`} data-testid="position-pnl">
-            ${pos.unrealized_pnl?.toFixed(2) || "0.00"}
-          </div>
-          <div className="text-xs text-gray-500">
-            {pos.unrealized_pnl_pct ? `${(pos.unrealized_pnl_pct * 100).toFixed(2)}%` : "0.00%"}
-          </div>
-        </div>
-      </div>
-
-      {/* Position Info */}
-      <div className="grid grid-cols-3 gap-2 text-xs">
-        <div>
-          <div className="text-gray-500">Entry</div>
-          <div className="text-white font-medium">${pos.entry_price?.toFixed(2)}</div>
-        </div>
-        <div>
-          <div className="text-gray-500">Mark</div>
-          <div className="text-white font-medium">${pos.mark_price?.toFixed(2)}</div>
-        </div>
-        <div>
-          <div className="text-gray-500">Leverage</div>
-          <div className="text-white font-medium">{pos.leverage}x</div>
-        </div>
-      </div>
-
-      {/* Control Buttons */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => onReduce(pos.symbol, 25)}
-          className="flex-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 px-3 py-2 rounded text-sm font-medium transition-colors"
-          data-testid="reduce-25-btn"
-        >
-          -25%
-        </button>
-        <button
-          onClick={() => onReduce(pos.symbol, 50)}
-          className="flex-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 px-3 py-2 rounded text-sm font-medium transition-colors"
-          data-testid="reduce-50-btn"
-        >
-          -50%
-        </button>
-        <button
-          onClick={() => onReduce(pos.symbol, 100)}
-          className="flex-1 bg-red-600/20 hover:bg-red-600/30 text-red-400 px-3 py-2 rounded text-sm font-medium transition-colors"
-          data-testid="close-position-btn"
-        >
-          Close
-        </button>
-        <button
-          onClick={() => onReverse(pos.symbol)}
-          className="flex-1 bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-400 px-3 py-2 rounded text-sm font-medium transition-colors"
-          data-testid="reverse-position-btn"
-        >
-          Reverse
-        </button>
-      </div>
-
-      {/* Protection Controls */}
-      <div className="space-y-2">
-        <div className="text-xs text-gray-400 font-medium">Protection</div>
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <input
-              type="number"
-              placeholder="Take Profit"
-              value={tpValue}
-              onChange={(e) => setTpValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleTPSubmit();
-              }}
-              className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
-              data-testid="tp-input"
-            />
-          </div>
+        <div className="flex items-center gap-2">
+          <span className={`text-sm font-bold ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>
+            {isProfitable ? '+' : ''}{pnlPct.toFixed(2)}%
+          </span>
           <button
-            onClick={handleTPSubmit}
-            className="bg-green-600/20 hover:bg-green-600/30 text-green-400 px-4 py-2 rounded text-sm font-medium transition-colors"
-            data-testid="tp-submit-btn"
+            onClick={() => setShowActions(!showActions)}
+            className="text-xs text-gray-400 hover:text-gray-600 px-1"
+            data-testid={`position-actions-toggle-${p.symbol}`}
           >
-            Set TP
-          </button>
-        </div>
-
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <input
-              type="number"
-              placeholder="Stop Loss"
-              value={slValue}
-              onChange={(e) => setSlValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleSLSubmit();
-              }}
-              className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
-              data-testid="sl-input"
-            />
-          </div>
-          <button
-            onClick={handleSLSubmit}
-            className="bg-red-600/20 hover:bg-red-600/30 text-red-400 px-4 py-2 rounded text-sm font-medium transition-colors"
-            data-testid="sl-submit-btn"
-          >
-            Set SL
+            {showActions ? '▲' : '▼'}
           </button>
         </div>
       </div>
+
+      {/* Stats Grid */}
+      <div className="px-5 py-3 grid grid-cols-2 gap-x-6 gap-y-2.5">
+        <div>
+          <div className="text-[11px] text-gray-400 uppercase tracking-wide">Entry</div>
+          <div className="text-sm font-semibold text-gray-900">${(p.entry_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        </div>
+        <div>
+          <div className="text-[11px] text-gray-400 uppercase tracking-wide">Mark</div>
+          <div className="text-sm font-semibold text-gray-900">${(p.mark_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        </div>
+        <div>
+          <div className="text-[11px] text-gray-400 uppercase tracking-wide">Size</div>
+          <div className="text-sm text-gray-700">{(p.qty || 0).toFixed(6)}</div>
+        </div>
+        <div>
+          <div className="text-[11px] text-gray-400 uppercase tracking-wide">Notional</div>
+          <div className="text-sm text-gray-700">${notional.toFixed(2)}</div>
+        </div>
+        <div>
+          <div className="text-[11px] text-gray-400 uppercase tracking-wide">Unrealized PnL</div>
+          <div className={`text-sm font-semibold ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>
+            {isProfitable ? '+' : ''}${pnl.toFixed(4)}
+          </div>
+        </div>
+        <div>
+          <div className="text-[11px] text-gray-400 uppercase tracking-wide">Leverage</div>
+          <div className="text-sm text-gray-700">{p.leverage || 1}x</div>
+        </div>
+      </div>
+
+      {/* Actions */}
+      {showActions && (
+        <div className="px-5 pb-3 pt-2 border-t border-gray-100" data-testid={`position-actions-${p.symbol}`}>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => onReduce(25)}
+              className="text-xs px-3 py-1.5 rounded bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors font-medium"
+              data-testid={`reduce-25-${p.symbol}`}
+            >
+              -25%
+            </button>
+            <button
+              onClick={() => onReduce(50)}
+              className="text-xs px-3 py-1.5 rounded bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors font-medium"
+              data-testid={`reduce-50-${p.symbol}`}
+            >
+              -50%
+            </button>
+            <button
+              onClick={onClose}
+              className="text-xs px-3 py-1.5 rounded bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-colors font-medium"
+              data-testid={`close-position-${p.symbol}`}
+            >
+              Close
+            </button>
+            <button
+              onClick={onReverse}
+              className="text-xs px-3 py-1.5 rounded bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors font-medium"
+              data-testid={`reverse-position-${p.symbol}`}
+            >
+              Reverse
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
