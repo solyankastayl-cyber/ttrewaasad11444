@@ -124,6 +124,8 @@ class ExecutionQueueWorker:
     
     async def _worker_loop(self):
         """Main worker loop."""
+        logger.info(f"🔄 [Worker] Loop started: {self.worker_id}")
+        
         try:
             while self._running:
                 # Update status: healthy (waiting for jobs)
