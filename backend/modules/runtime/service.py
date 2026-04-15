@@ -643,7 +643,10 @@ class RuntimeService:
         signal = {
             "symbol": decision["symbol"],
             "side": decision["side"],
-            "entry_price": decision.get("entry_price")
+            "entry_price": decision.get("entry_price"),
+            "decision_id": decision_id,  # Paper Trading: передаем decision_id
+            "strategy": decision.get("strategy"),
+            "timeframe": decision.get("timeframe")
         }
         
         result = await self._execute_signal(signal, size_usd=decision.get("size_usd", 500))

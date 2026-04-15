@@ -91,6 +91,14 @@ class ExecutionBridge:
             trace_id = str(uuid4())
             idempotency_key = f"runtime-{job_id}"
             
+            # Paper Trading: Add decision metadata to payload
+            enriched_payload = {
+                **order_request,
+                "decision_id": signal.get("decision_id"),
+                "strategy": signal.get("strategy"),
+                "timeframe": signal.get("timeframe")
+            }
+            
             # Enqueue напрямую через ExecutionQueueRepository
             enqueue_result = await self.queue_repo.enqueue(
                 job_id=job_id,
@@ -100,7 +108,7 @@ class ExecutionBridge:
                 exchange="binance",
                 action="EXECUTE_ORDER",
                 priority=80,  # ENTRY priority
-                payload=order_request,
+                payload=enriched_payload,
                 confidence=signal.get("confidence", 0.5)
             )
             

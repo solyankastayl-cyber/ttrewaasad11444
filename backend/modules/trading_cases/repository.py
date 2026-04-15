@@ -10,14 +10,39 @@ from .models import TradingCase
 
 
 class TradingCaseRepository:
-    """In-memory repository for trading cases."""
+    """In-memory repository for trading cases + MongoDB persistence."""
     
-    def __init__(self):
+    def __init__(self, db=None):
+        """
+        Initialize repository.
+        
+        Args:
+            db: MongoDB database instance (optional for persistence)
+        """
         self.cases: Dict[str, TradingCase] = {}
+        self.db = db  # MongoDB instance for persistence
     
     def save(self, case: TradingCase) -> TradingCase:
-        """Save or update a case."""
+        """Save or update a case (in-memory + MongoDB)."""
         self.cases[case.case_id] = case
+        
+        # Persist to MongoDB if db is available
+        if self.db is not None:
+            try:
+                collection = self.db["trading_cases"]
+                # Convert Pydantic model to dict for MongoDB
+                case_dict = case.model_dump() if hasattr(case, 'model_dump') else case.dict()
+                
+                # Upsert (update or insert)
+                collection.replace_one(
+                    {"case_id": case.case_id},
+                    case_dict,
+                    upsert=True
+                )
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Failed to persist case to MongoDB: {e}")
+        
         return case
     
     def get(self, case_id: str) -> Optional[TradingCase]:
@@ -52,9 +77,16 @@ class TradingCaseRepository:
 _repository: Optional[TradingCaseRepository] = None
 
 
+def init_repository(db):
+    """Initialize repository singleton with MongoDB."""
+    global _repository
+    _repository = TradingCaseRepository(db=db)
+    return _repository
+
+
 def get_repository() -> TradingCaseRepository:
     """Get repository singleton."""
     global _repository
     if _repository is None:
-        _repository = TradingCaseRepository()
+        raise RuntimeError("TradingCaseRepository not initialized - call init_repository() first")
     return _repository

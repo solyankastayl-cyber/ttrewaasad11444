@@ -484,13 +484,17 @@ async def lifespan(app: FastAPI):
     # Initialize TradingCase Service (P0.2)
     try:
         from modules.trading_cases.service import init_trading_case_service, get_trading_case_service
+        from modules.trading_cases.repository import init_repository
         from modules.exchange.service_v2 import get_exchange_service
+        
+        # Initialize repository with MongoDB
+        init_repository(audit_motor_db)
         
         # Initialize with exchange service
         exchange_service_v2 = get_exchange_service()
         init_trading_case_service(exchange_service_v2)
         
-        print("[P0.2] ✅ TradingCase Service initialized")
+        print("[P0.2] ✅ TradingCase Service initialized (MongoDB-backed)")
     except Exception as e:
         print(f"[P0.2] TradingCase Service initialization failed: {e}")
         import traceback

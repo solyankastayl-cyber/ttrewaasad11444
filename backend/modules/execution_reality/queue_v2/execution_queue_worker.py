@@ -187,6 +187,11 @@ class ExecutionQueueWorker:
             )
             
             if result.get("success"):
+                # Paper Trading Integration: Create Position after FILLED
+                print(f"[DEBUG] Worker {self.worker_id}: Execution success, calling _handle_fill...")
+                await self._handle_fill(job, result)
+                print(f"[DEBUG] Worker {self.worker_id}: _handle_fill completed")
+                
                 # Success: mark acked
                 ack_success = await self.queue_repo.mark_acked(
                     job_id=job.jobId,
@@ -258,3 +263,101 @@ class ExecutionQueueWorker:
         finally:
             # Clear current job
             self.heartbeat.set_current_job(None)
+    
+    async def _handle_fill(self, job, execution_result):
+        """
+        Handle filled order: create Position and write execution events.
+        
+        Paper Trading Integration Point.
+        """
+        import sys
+        print(f"[FILL] _handle_fill CALLED for job_id={job.jobId}", file=sys.stderr, flush=True)
+        
+        try:
+            # Get TradingCaseService
+            from modules.trading_cases.service import get_trading_case_service
+            from modules.trading_cases.models import CaseCreateRequest
+            from modules.execution_logger import get_execution_logger
+            
+            print(f"[FILL] Imports OK", file=sys.stderr, flush=True)
+            
+            trading_case_service = get_trading_case_service()
+            execution_logger = get_execution_logger()
+            
+            print(f"[FILL] Services obtained", file=sys.stderr, flush=True)
+            
+            # Extract decision_id from payload
+            decision_id = job.payload.get("decision_id")
+            strategy = job.payload.get("strategy", "QUEUE_EXECUTION")
+            timeframe = job.payload.get("timeframe", "1h")
+            
+            print(f"[FILL] decision_id={decision_id}, strategy={strategy}", file=sys.stderr, flush=True)
+            
+            # Parse execution result
+            filled_qty = execution_result.get("filled_qty", job.payload.get("quantity", 0.001))
+            fill_price = execution_result.get("avg_price", job.payload.get("price", 0.0))
+            order_id = execution_result.get("order_id")
+            
+            print(f"[FILL] filled_qty={filled_qty}, fill_price={fill_price}", file=sys.stderr, flush=True)
+            
+            # Calculate size_usd
+            size_usd = filled_qty * fill_price
+            
+            # Create Trading Case (Position)
+            case_request = CaseCreateRequest(
+                symbol=job.symbol,
+                side="LONG" if job.payload.get("side") == "BUY" else "SHORT",
+                entry_price=fill_price,
+                qty=filled_qty,
+                size_usd=size_usd,
+                strategy=strategy,
+                trading_tf=timeframe,
+                thesis=f"Execution via job {job.jobId}",
+                decision_id=decision_id
+            )
+            
+            print(f"[FILL] CaseCreateRequest created, calling create_case...", file=sys.stderr, flush=True)
+            
+            try:
+                case = await trading_case_service.create_case(case_request)
+                print(f"[FILL] Position created: case_id={case.case_id}", file=sys.stderr, flush=True)
+            except Exception as create_error:
+                print(f"[FILL] ERROR creating case: {create_error}", file=sys.stderr, flush=True)
+                raise
+            
+            logger.info(
+                f"✅ [Worker] Position created: case_id={case.case_id}, "
+                f"symbol={job.symbol}, qty={filled_qty}, price=${fill_price:.2f}"
+            )
+            
+            # Write execution events
+            await execution_logger.log_event({
+                "type": "ORDER_SUBMITTED",
+                "symbol": job.symbol,
+                "side": job.payload.get("side"),
+                "job_id": job.jobId,
+                "order_id": order_id,
+                "decision_id": decision_id
+            })
+            
+            await execution_logger.log_event({
+                "type": "ORDER_FILLED",
+                "symbol": job.symbol,
+                "order_id": order_id,
+                "filled_qty": filled_qty,
+                "avg_price": fill_price,
+                "size_usd": size_usd,
+                "case_id": case.case_id,
+                "decision_id": decision_id
+            })
+            
+            logger.info(
+                f"✅ [Worker] Execution events logged for job_id={job.jobId}"
+            )
+            
+        except Exception as e:
+            logger.error(
+                f"⚠️ [Worker] Failed to create position for job {job.jobId}: {e}",
+                exc_info=True
+            )
+            # Don't fail the job if position creation fails (execution succeeded)
