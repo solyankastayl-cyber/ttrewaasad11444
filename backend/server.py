@@ -163,6 +163,11 @@ async def lifespan(app: FastAPI):
         audit_controller = AuditController(audit_motor_db)
         await audit_controller.ensure_indexes()
         
+        # ── Risk Guard ────────────────────────────────────
+        from modules.risk_guard import init_risk_guard
+        risk_guard = init_risk_guard(db=audit_motor_db)
+        print(f"[P1] Risk Guard initialized: max_size=${risk_guard.get_status()['config']['max_position_size_usd']}, max_pos={risk_guard.get_status()['config']['max_open_positions']}")
+        
         # Wire audit into ExecutionEventBus
         execution_reality_controller.event_bus.audit_repo = audit_controller.execution
         

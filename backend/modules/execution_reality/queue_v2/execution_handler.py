@@ -51,16 +51,31 @@ class ExecutionHandler:
     ) -> Dict[str, Any]:
         """
         Execute order based on current mode.
-        
-        Args:
-            job_id: Job ID from ExecutionQueue
-            trace_id: Trace ID for audit
-            payload: Order request payload
-        
-        Returns:
-            {"success": bool, "result": dict, "error": str (optional)}
+        Pre-execution risk guards are checked first.
         """
         try:
+            # ── Pre-execution Risk Guard ──────────────────
+            try:
+                from modules.risk_guard import get_risk_guard
+                guard = get_risk_guard()
+                if guard:
+                    check = await guard.check_pre_execution(payload)
+                    if not check.get("allowed"):
+                        reason = check.get("reason", "unknown")
+                        logger.warning(
+                            f"[ExecutionHandler] ORDER REJECTED by RiskGuard: "
+                            f"job_id={job_id} symbol={payload.get('symbol')} reason={reason}"
+                        )
+                        return {
+                            "success": False,
+                            "error": f"RiskGuard: {reason}",
+                            "mode": self.mode,
+                            "job_id": job_id,
+                            "rejected_by": "risk_guard",
+                        }
+            except Exception as e:
+                logger.error(f"[ExecutionHandler] RiskGuard check failed: {e}")
+
             if self.mode == "DRY_RUN":
                 logger.info(
                     f"[ExecutionHandler] DRY_RUN execute: job_id={job_id} symbol={payload.get('symbol')}"
