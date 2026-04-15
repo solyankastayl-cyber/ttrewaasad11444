@@ -57,6 +57,34 @@ async def get_system_status():
     else:
         flow_integrity = 0.0
     
+    # CRITICAL: Flow integrity for RECENT decisions (last 10, last 20)
+    # This filters out legacy data
+    recent_approved_10 = await db["pending_decisions"].find(
+        {"status": "EXECUTED"}
+    ).sort("created_at", -1).limit(10).to_list(10)
+    
+    recent_approved_20 = await db["pending_decisions"].find(
+        {"status": "EXECUTED"}
+    ).sort("created_at", -1).limit(20).to_list(20)
+    
+    # Check flow for last 10
+    flow_last_10_count = 0
+    for dec in recent_approved_10:
+        pos = await db["trading_cases"].find_one({"decision_id": dec["decision_id"]})
+        if pos:
+            flow_last_10_count += 1
+    
+    flow_integrity_last_10 = (flow_last_10_count / len(recent_approved_10) * 100) if recent_approved_10 else 0.0
+    
+    # Check flow for last 20
+    flow_last_20_count = 0
+    for dec in recent_approved_20:
+        pos = await db["trading_cases"].find_one({"decision_id": dec["decision_id"]})
+        if pos:
+            flow_last_20_count += 1
+    
+    flow_integrity_last_20 = (flow_last_20_count / len(recent_approved_20) * 100) if recent_approved_20 else 0.0
+    
     return {
         "decisions": {
             "total": total_decisions,
@@ -69,7 +97,11 @@ async def get_system_status():
             "active": positions_active,
             "closed": positions_closed
         },
-        "flow_integrity_pct": round(flow_integrity, 1),
+        "flow_integrity": {
+            "overall_pct": round(flow_integrity, 1),
+            "last_10_pct": round(flow_integrity_last_10, 1),
+            "last_20_pct": round(flow_integrity_last_20, 1)
+        },
         "adaptation_disabled": os.getenv("DISABLE_ADAPTATION", "false") == "true"
     }
 
