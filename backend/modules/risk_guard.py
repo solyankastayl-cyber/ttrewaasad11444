@@ -266,11 +266,30 @@ class RiskGuard:
 
     # ─── API helpers ─────────────────────────────────────
 
-    def get_status(self) -> Dict[str, Any]:
+    async def get_status(self) -> Dict[str, Any]:
+        total_pnl = 0.0
+        open_positions = 0
+        if self.db is not None:
+            try:
+                pipeline = [
+                    {"$match": {"status": "CLOSED"}},
+                    {"$group": {"_id": None, "total": {"$sum": "$realized_pnl"}}},
+                ]
+                cursor = self.db.trading_cases.aggregate(pipeline)
+                results = await cursor.to_list(length=1)
+                total_pnl = results[0]["total"] if results else 0.0
+            except Exception:
+                pass
+            try:
+                open_positions = await self.db.portfolio_positions.count_documents({"status": "OPEN"})
+            except Exception:
+                pass
         return {
             "kill_switch_active": self._kill_switch_active,
             "kill_switch_reason": self._kill_switch_reason,
             "kill_switch_activated_at": self._kill_switch_activated_at,
+            "total_pnl": round(total_pnl, 4),
+            "open_positions": open_positions,
             "config": {
                 "max_position_size_usd": MAX_POSITION_SIZE_USD,
                 "max_open_positions": MAX_OPEN_POSITIONS,
