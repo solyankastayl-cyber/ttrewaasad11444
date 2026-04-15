@@ -27,7 +27,7 @@ export default function AnalyticsWorkspace() {
     <div className="p-6 space-y-4" data-testid="analytics-workspace">
       {/* Header */}
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-100">Operational Analytics</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Operational Analytics</h2>
         <p className="text-sm text-gray-500 mt-1">
           System observability: learning, decisions, R1, R2, execution, safety
         </p>

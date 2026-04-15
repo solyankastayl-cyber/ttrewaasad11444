@@ -120,7 +120,7 @@ const TradingTerminal = () => {
         return (
           <div className="p-6 max-w-[1920px] mx-auto">
             <div className="mb-6">
-              <h2 className="text-2xl font-semibold text-white mb-2">{t('Позиции', 'Positions')}</h2>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-2">{t('Позиции', 'Positions')}</h2>
               <p className="text-sm text-gray-400">{t('Текущие открытые позиции', 'Current open positions')}</p>
             </div>
             <PortfolioWorkspace />
