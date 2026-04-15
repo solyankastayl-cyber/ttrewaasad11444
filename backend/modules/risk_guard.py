@@ -116,7 +116,7 @@ class RiskGuard:
     # ─── Internal helpers ────────────────────────────────
 
     async def _count_open_positions(self) -> int:
-        if not self.db:
+        if self.db is None:
             return 0
         try:
             return await self.db.portfolio_positions.count_documents(
@@ -127,7 +127,7 @@ class RiskGuard:
             return 0
 
     async def _check_duplicate(self, decision_id: str) -> bool:
-        if not self.db:
+        if self.db is None:
             return False
         try:
             existing = await self.db.trading_cases.find_one(
@@ -140,7 +140,7 @@ class RiskGuard:
 
     async def _check_kill_switch(self):
         """Check total realised PnL against threshold."""
-        if not self.db:
+        if self.db is None:
             return
         try:
             pipeline = [
@@ -194,6 +194,12 @@ class RiskGuard:
             f"entry=${entry_price:,.2f} exit=${exit_price:,.2f} "
             f"qty={qty:.6f} pnl=${calculated_pnl:.4f}"
         )
+        # Also print for visibility in logs
+        print(
+            f"[RiskGuard] PNL VERIFIED: {symbol} {side} "
+            f"entry=${entry_price:,.2f} exit=${exit_price:,.2f} "
+            f"qty={qty:.6f} pnl=${calculated_pnl:.4f}"
+        )
         return True
 
     async def integrity_check(self) -> Dict[str, Any]:
@@ -207,7 +213,7 @@ class RiskGuard:
             "pnl_mismatches": 0,
             "checked_at": datetime.now(timezone.utc).isoformat(),
         }
-        if not self.db:
+        if self.db is None:
             return result
 
         try:

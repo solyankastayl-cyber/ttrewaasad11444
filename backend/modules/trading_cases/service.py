@@ -156,7 +156,28 @@ class TradingCaseService:
         
         case.realized_pnl = final_pnl
         case.unrealized_pnl = 0.0
-        
+
+        # ── Risk Guard: PnL Sanity Check (Close Integrity) ──
+        try:
+            from modules.risk_guard import get_risk_guard
+            guard = get_risk_guard()
+            if guard:
+                verified = guard.verify_close_pnl(
+                    symbol=case.symbol,
+                    side=case.side,
+                    entry_price=case.avg_entry_price,
+                    exit_price=close_request.close_price,
+                    qty=case.qty,
+                    stored_pnl=final_pnl,
+                )
+                if not verified:
+                    logger.error(
+                        f"[TradingCaseService] PNL MISMATCH on close for case {case_id}! "
+                        f"Proceeding with calculated value."
+                    )
+        except Exception as e:
+            logger.error(f"[TradingCaseService] RiskGuard PnL check failed: {e}")
+
         self.repo.save(case)
         
         logger.info(f"[TradingCaseService] Closed case {case_id}: {close_request.close_reason}, PnL=${final_pnl:.2f}")

@@ -1547,6 +1547,31 @@ try:
 except ImportError as e:
     print(f"[Routes] Runtime router not available: {e}")
 
+# P1 Risk Guard Status Endpoint
+@app.get("/api/runtime/risk-status")
+async def risk_guard_status():
+    """Return Risk Guard status, stats, and integrity check."""
+    from modules.risk_guard import get_risk_guard
+    guard = get_risk_guard()
+    if not guard:
+        raise HTTPException(status_code=503, detail="Risk Guard not initialized")
+    status = guard.get_status()
+    integrity = await guard.integrity_check()
+    return {
+        "ok": True,
+        **status,
+        "integrity": integrity,
+    }
+
+@app.post("/api/runtime/risk-reset")
+async def risk_guard_reset():
+    """Manually reset the kill switch."""
+    from modules.risk_guard import get_risk_guard
+    guard = get_risk_guard()
+    if not guard:
+        raise HTTPException(status_code=503, detail="Risk Guard not initialized")
+    return guard.reset_kill_switch()
+
 # Sprint 5: Decision Analytics Routes
 try:
     from modules.decision_outcome.routes import router as decision_analytics_router
