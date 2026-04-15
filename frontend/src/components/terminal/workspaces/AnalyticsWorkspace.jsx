@@ -16,12 +16,15 @@ import SafetyAnalyticsPanel from '../analytics/SafetyAnalyticsPanel';
 import AdaptiveRiskAnalyticsPanel from '../analytics/AdaptiveRiskAnalyticsPanel';
 import DecisionAnalyticsPanel from '../analytics/DecisionAnalyticsPanel';
 import LearningInsightsPanel from '../analytics/LearningInsightsPanel';
+import DecisionQualityPanel from '../analytics/DecisionQualityPanel';
 import useAdaptiveRiskAnalytics from '@/hooks/analytics/useAdaptiveRiskAnalytics';
 import { useDecisionAnalytics } from '../../../hooks/analytics/useDecisionAnalytics';
+import { useDecisionQuality } from '../../../hooks/analytics/useDecisionQuality';
 
 export default function AnalyticsWorkspace() {
   const { data: r2Data, loading: r2Loading } = useAdaptiveRiskAnalytics();
   const { data: decisionData, loading: decisionLoading } = useDecisionAnalytics();
+  const { data: qualityData, loading: qualityLoading } = useDecisionQuality();
 
   return (
     <div className="p-6 space-y-4" data-testid="analytics-workspace">
@@ -38,6 +41,9 @@ export default function AnalyticsWorkspace() {
 
       {/* Sprint 5: Decision Performance — SECOND (outcomes) */}
       <DecisionAnalyticsPanel data={decisionData} loading={decisionLoading} />
+
+      {/* P2: Decision Quality Analytics */}
+      <DecisionQualityPanel data={qualityData} loading={qualityLoading} />
 
       {/* Existing Analytics Panels Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">

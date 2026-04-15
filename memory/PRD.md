@@ -41,6 +41,12 @@ Clone, analyze, and deploy FOMO-Trade v1.2 from GitHub. Fix P0 issue: execution 
     - `GET /api/runtime/risk-status` — returns guard config, stats, integrity
     - `POST /api/runtime/risk-reset` — manually resets kill switch
 
+### P2 — Decision Quality & Feedback Layer (Apr 15, 2026)
+17. Created `/app/backend/modules/decision_quality.py` with full analytics
+18. Added `GET /api/analytics/decision-quality` endpoint
+19. Created `DecisionQualityPanel.jsx` (4 blocks: Core Metrics, Confidence, Direction, Losses)
+20. Wired into AnalyticsWorkspace with `useDecisionQuality` hook (15s auto-refresh)
+
 ## Test Results
 - All 5 guards tested and passing (test script: `/app/backend/tests/test_risk_guard.py`)
 - 10/10 closed cases PnL verified (0 mismatches)
@@ -57,6 +63,7 @@ Clone, analyze, and deploy FOMO-Trade v1.2 from GitHub. Fix P0 issue: execution 
 - [x] Position & Risk Validation Layer (all 5 guards)
 
 ### P2
+- [x] Decision Quality & Feedback Layer (analytics, API, UI blocks)
 - [ ] WebSocket reconnection logic improvement
 - [ ] Prediction and Tech Analysis page load performance optimization
 - [ ] Error boundaries for better UX on API failures

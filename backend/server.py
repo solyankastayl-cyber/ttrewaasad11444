@@ -169,6 +169,11 @@ async def lifespan(app: FastAPI):
         _rg_status = await risk_guard.get_status()
         print(f"[P1] Risk Guard initialized: max_size=${_rg_status['config']['max_position_size_usd']}, max_pos={_rg_status['config']['max_open_positions']}")
         
+        # P2: Decision Quality Analytics
+        from modules.decision_quality import init_decision_quality_service
+        init_decision_quality_service(db=audit_motor_db)
+        print("[P2] Decision Quality Analytics initialized")
+        
         # Wire audit into ExecutionEventBus
         execution_reality_controller.event_bus.audit_repo = audit_controller.execution
         
@@ -1572,6 +1577,17 @@ async def risk_guard_reset():
     if not guard:
         raise HTTPException(status_code=503, detail="Risk Guard not initialized")
     return guard.reset_kill_switch()
+
+# P2: Decision Quality Analytics
+@app.get("/api/analytics/decision-quality")
+async def decision_quality_analytics():
+    """Decision quality metrics — analytics only, no strategy changes."""
+    from modules.decision_quality import get_decision_quality_service
+    svc = get_decision_quality_service()
+    if not svc:
+        raise HTTPException(status_code=503, detail="DecisionQualityService not initialized")
+    report = await svc.get_quality_report()
+    return {"ok": True, **report}
 
 # Sprint 5: Decision Analytics Routes
 try:
